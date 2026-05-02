@@ -1,0 +1,72 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  refreshTokens RefreshToken[]
+  wallpapers    Wallpaper[]
+  favorites     Favorite[]
+  history       History[]
+}
+
+model Otp {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Wallpaper {
+  id        Int        @id @default(autoincrement())
+  imageUrl  String
+  prompt    String
+  tags      String[]
+  userId    Int?
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  favorites Favorite[]
+  createdAt DateTime   @default(now())
+}
+
+model Favorite {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  wallpaperId Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallpaper   Wallpaper @relation(fields: [wallpaperId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, wallpaperId])
+}
+
+model History {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  prompt    String
+  imageUrl  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
