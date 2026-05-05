@@ -1,8 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { COLORS, SIZES, SHADOWS } from '../utils/constants';
@@ -11,6 +13,8 @@ import { AuthContext } from '../context/AuthContext';
 const bgImage = require('../../assets/images/img_4.png');
 const logo = require('../../assets/images/logo.svg');
 
+WebBrowser.maybeCompleteAuthSession();
+
 export const RegisterScreen = ({ navigation }: any) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -18,7 +22,31 @@ export const RegisterScreen = ({ navigation }: any) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { registerInitiate, isLoading } = useContext(AuthContext);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { registerInitiate, googleSignIn, isLoading } = useContext(AuthContext);
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    webClientId: '422784466370-j6lfhsb1eglqbnf06116hbickririnit.apps.googleusercontent.com',
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleBackendGoogleAuth(id_token);
+    }
+  }, [response]);
+
+  const handleBackendGoogleAuth = async (idToken: string) => {
+    try {
+      setIsGoogleLoading(true);
+      setError(null);
+      await googleSignIn(idToken);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Google Sign-In failed.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -134,7 +162,8 @@ export const RegisterScreen = ({ navigation }: any) => {
             title="Continue with Google"
             variant="outline"
             icon={<Ionicons name="logo-google" size={20} color={COLORS.primary} />}
-            onPress={() => console.log('Google Sign In')}
+            onPress={() => promptAsync()}
+            isLoading={isGoogleLoading}
             style={styles.googleButton}
           />
 

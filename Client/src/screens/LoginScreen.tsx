@@ -1,8 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { COLORS, SIZES, SHADOWS } from '../utils/constants';
@@ -11,25 +13,58 @@ import { AuthContext } from '../context/AuthContext';
 const bgImage = require('../../assets/images/img_4.png');
 const logo = require('../../assets/images/logo.svg');
 
+WebBrowser.maybeCompleteAuthSession();
+
 export const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login, isLoading } = useContext(AuthContext);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { login, googleSignIn } = useContext(AuthContext);
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    webClientId: '422784466370-j6lfhsb1eglqbnf06116hbickririnit.apps.googleusercontent.com',
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleBackendGoogleAuth(id_token);
+    }
+  }, [response]);
+
+  const handleBackendGoogleAuth = async (idToken: string) => {
+    try {
+      setIsGoogleLoading(true);
+      setError(null);
+      await googleSignIn(idToken);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Google Sign-In failed.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Please enter both email and password');
       return;
     }
-    
     try {
       setError(null);
+      setIsLoginLoading(true);
       await login(email, password);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to login. Please try again.');
+    } finally {
+      setIsLoginLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = () => {
+    promptAsync();
   };
 
   return (
@@ -86,7 +121,7 @@ export const LoginScreen = ({ navigation }: any) => {
           <Button
             title="Log In"
             onPress={handleLogin}
-            isLoading={isLoading}
+            isLoading={isLoginLoading}
             style={styles.loginButton}
           />
 
@@ -100,7 +135,8 @@ export const LoginScreen = ({ navigation }: any) => {
             title="Continue with Google"
             variant="outline"
             icon={<Ionicons name="logo-google" size={20} color={COLORS.primary} />}
-            onPress={() => console.log('Google Sign In')}
+            onPress={handleGoogleSignIn}
+            isLoading={isGoogleLoading}
             style={styles.googleButton}
           />
 

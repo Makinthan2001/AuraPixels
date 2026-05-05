@@ -90,6 +90,11 @@ export const authService = {
       throw new Error('Invalid credentials');
     }
 
+    // Google-only accounts have no password
+    if (!user.password) {
+      throw new Error('This account uses Google Sign-In. Please continue with Google.');
+    }
+
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
       throw new Error('Invalid credentials');

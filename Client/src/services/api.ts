@@ -58,6 +58,7 @@ export const api = {
   login: (data: any) => apiClient.post('/auth/login', data),
   logout: (refreshToken: string) => apiClient.post('/auth/logout', { refreshToken }),
   refresh: (refreshToken: string) => apiClient.post('/auth/refresh', { refreshToken }),
+  googleSignIn: (idToken: string) => apiClient.post('/auth/google', { idToken }),
 
   // Wallpapers
   getWallpapers: () => apiClient.get('/wallpapers'),

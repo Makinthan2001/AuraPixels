@@ -14,6 +14,7 @@ interface AuthContextData {
   login: (email: string, pass: string) => Promise<void>;
   registerInitiate: (email: string) => Promise<void>;
   verifyOTP: (name: string, email: string, pass: string, otp: string) => Promise<void>;
+  googleSignIn: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -86,6 +87,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const googleSignIn = async (idToken: string) => {
+    try {
+      const response = await api.googleSignIn(idToken);
+      const { user: userData, accessToken, refreshToken } = response.data;
+
+      await storage.setItem('accessToken', accessToken);
+      await storage.setItem('refreshToken', refreshToken);
+      setUser(userData);
+    } catch (error) {
+      console.error('Google Sign-In error:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       const refreshToken = await storage.getItem('refreshToken');
@@ -102,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, registerInitiate, verifyOTP, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, registerInitiate, verifyOTP, googleSignIn, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
