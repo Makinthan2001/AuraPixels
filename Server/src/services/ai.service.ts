@@ -5,8 +5,8 @@ dotenv.config();
 const HF_API_URL = 'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell';
 const HF_API_KEY = process.env.HF_API_KEY || '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';
 
-export type AIStyle = 'cinematic' | 'anime' | 'minimal' | 'abstract' | 'realistic';
-export type AISize = 'square' | 'portrait' | 'landscape';
+export type AIStyle = 'cinematic' | 'anime' | 'minimal' | 'abstract' | 'cyberpunk' | 'realistic';
+export type AISize = 'square' | 'portrait' | 'landscape' | 'tablet' | 'ultrawide';
 
 interface SizeMapping {
   width: number;
@@ -17,6 +17,8 @@ const SIZE_MAP: Record<AISize, SizeMapping> = {
   square: { width: 512, height: 512 },
   portrait: { width: 768, height: 1344 },
   landscape: { width: 1344, height: 768 },
+  tablet: { width: 1024, height: 1365 },
+  ultrawide: { width: 1536, height: 640 },
 };
 
 const STYLE_PROMPTS: Record<AIStyle, string> = {
@@ -24,6 +26,7 @@ const STYLE_PROMPTS: Record<AIStyle, string> = {
   anime: 'anime style, vibrant colors, clean lines, studio ghibli inspired, high quality digital art',
   minimal: 'minimalist design, clean lines, simple composition, flat colors, modern aesthetic',
   abstract: 'abstract art, fluid shapes, conceptual composition, bold colors, artistic interpretation',
+  cyberpunk: 'cyberpunk cityscape, neon glow, futuristic technology, dark atmosphere, vibrant contrast',
   realistic: 'photorealistic, ultra detailed, sharp focus, 4k resolution, natural lighting',
 };
 
@@ -91,7 +94,16 @@ export class AIService {
     return {
       imageUrl: `data:image/png;base64,${base64Image}`,
       enhancedPrompt,
-      size: size === 'portrait' ? '9:16' : size === 'landscape' ? '16:9' : '1:1',
+      size:
+        size === 'portrait'
+          ? '9:16'
+          : size === 'landscape'
+            ? '16:9'
+            : size === 'tablet'
+              ? '3:4'
+              : size === 'ultrawide'
+                ? '21:9'
+                : '1:1',
     };
   }
 }

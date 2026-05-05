@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Image } from 'expo-image';
-import { COLORS, SIZES, SHADOWS } from '../utils/constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../utils/constants';
 
 interface WallpaperCardProps {
   url: string;
@@ -25,12 +26,16 @@ export const WallpaperCard: React.FC<WallpaperCardProps> = ({ url, onPress, titl
         source={{ uri: url }}
         placeholder={blurhash}
         contentFit="cover"
-        transition={500}
+        transition={600}
       />
+      
       {title && (
-        <View style={styles.overlay}>
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={styles.overlay}
+        >
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        </View>
+        </LinearGradient>
       )}
     </TouchableOpacity>
   );
@@ -39,11 +44,11 @@ export const WallpaperCard: React.FC<WallpaperCardProps> = ({ url, onPress, titl
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    borderRadius: SIZES.radius,
+    borderRadius: 30,
     overflow: 'hidden',
-    marginBottom: SIZES.md,
-    backgroundColor: COLORS.surface,
-    ...SHADOWS.subtle,
+    backgroundColor: COLORS.lumina.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   image: {
     width: '100%',
@@ -54,12 +59,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: SIZES.sm,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    padding: 15,
+    paddingTop: 30,
   },
   title: {
-    color: COLORS.white,
+    color: COLORS.lumina.white,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    opacity: 0.9,
   },
 });

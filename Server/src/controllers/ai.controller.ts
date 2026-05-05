@@ -18,13 +18,13 @@ export const generateWallpaper = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const validStyles: AIStyle[] = ['cinematic', 'anime', 'minimal', 'abstract', 'realistic'];
+    const validStyles: AIStyle[] = ['cinematic', 'anime', 'minimal', 'abstract', 'cyberpunk', 'realistic'];
     if (!validStyles.includes(style)) {
       res.status(400).json({ message: 'Invalid style' });
       return;
     }
 
-    const validSizes: AISize[] = ['square', 'portrait', 'landscape'];
+    const validSizes: AISize[] = ['square', 'portrait', 'landscape', 'tablet', 'ultrawide'];
     if (!validSizes.includes(size)) {
       res.status(400).json({ message: 'Invalid size' });
       return;

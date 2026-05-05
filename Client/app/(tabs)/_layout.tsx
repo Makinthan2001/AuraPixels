@@ -20,22 +20,21 @@ export default function TabLayout() {
             iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <Ionicons name={iconName} size={24} color={color} />;
+          return <Ionicons name={iconName} size={28} color={color} />;
         },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarActiveTintColor: '#8ed5ff',
+        tabBarInactiveTintColor: '#87929a',
         tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopWidth: 0,
-          height: 65,
-          paddingBottom: 10,
-          paddingTop: 10,
+          backgroundColor: '#0f1418',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255,255,255,0.05)',
+          elevation: 0,
+          height: 80,
+          paddingBottom: 20,
           position: 'absolute',
-          bottom: 20,
-          left: 20,
-          right: 20,
-          borderRadius: 20,
-          ...SHADOWS.medium,
+          bottom: 0,
+          left: 0,
+          right: 0,
         },
         tabBarShowLabel: false,
       })}

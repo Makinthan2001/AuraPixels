@@ -9,6 +9,14 @@ export const COLORS = {
   white: '#FFFFFF',
   error: '#FF4C4C',
   success: '#4CAF50',
+  lumina: {
+    background: '#0f1418',
+    surface: '#1b2024',
+    primary: '#8ed5ff',
+    outline: '#87929a',
+    white: '#FFFFFF',
+    glass: 'rgba(255, 255, 255, 0.05)',
+  }
 };
 
 export const SIZES = {
