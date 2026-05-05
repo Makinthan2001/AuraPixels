@@ -1,19 +1,42 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '../components/Button';
-import { COLORS, SIZES } from '../utils/constants';
-import { FavoritesContext } from '../context/FavoritesContext';
+import React, { useState, useContext, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Platform,
+} from "react-native";
+import { Image } from "expo-image";
+import { File, Paths } from "expo-file-system";
+import { Ionicons } from "@expo/vector-icons";
+import { Button } from "../components/Button";
+import { COLORS, SIZES } from "../utils/constants";
+import { FavoritesContext } from "../context/FavoritesContext";
+import { api } from "../services/api";
 
-const STYLES = ['Anime', 'Realistic', '3D', 'Cyberpunk', 'Minimal', 'Watercolor'];
-const RESOLUTIONS = ['Mobile (9:16)', 'Desktop (16:9)', 'Square (1:1)'];
+const STYLES = [
+  { label: "Cinematic", value: "cinematic" },
+  { label: "Anime", value: "anime" },
+  { label: "Minimal", value: "minimal" },
+  { label: "Abstract", value: "abstract" },
+  { label: "Realistic", value: "realistic" },
+];
+
+const RESOLUTIONS = [
+  { label: "Mobile (Portrait)", value: "portrait" },
+  { label: "Square (1:1)", value: "square" },
+  { label: "Desktop (Landscape)", value: "landscape" },
+];
 
 export const GenerateScreen = ({ route, navigation }: any) => {
-  const initialPrompt = route.params?.initialPrompt || '';
+  const initialPrompt = route.params?.initialPrompt || "";
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [activeStyle, setActiveStyle] = useState('Realistic');
-  const [activeRes, setActiveRes] = useState('Mobile (9:16)');
+  const [activeStyle, setActiveStyle] = useState("cinematic");
+  const [activeRes, setActiveRes] = useState("portrait");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<any>(null);
 
@@ -25,79 +48,178 @@ export const GenerateScreen = ({ route, navigation }: any) => {
     }
   }, [route.params]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) {
-      Alert.alert('Error', 'Please enter a prompt first.');
+      Alert.alert("Error", "Please enter a prompt first.");
       return;
     }
-    
+
+    if (prompt.length > 200) {
+      Alert.alert("Error", "Prompt must be 200 characters or less.");
+      return;
+    }
+
     setIsGenerating(true);
     setGeneratedImage(null);
-    
-    // Simulate API call
-    setTimeout(() => {
+
+    try {
+      const response = await api.generateWallpaper(
+        prompt,
+        activeStyle,
+        activeRes,
+      );
+      const data = response.data;
+
       const newImage = {
-        id: Date.now().toString(),
-        url: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2574&auto=format&fit=crop', // mock generated image
-        title: prompt.slice(0, 20) + '...',
-        prompt: prompt,
-        tags: [activeStyle, 'AI Generated'],
+        id: Date.now().toString(), // We don't have the real DB ID returned in the same format right now, but we use what we have
+        url: data.imageUrl,
+        title: prompt.slice(0, 20) + "...",
+        prompt: data.prompt, // enhanced prompt
+        tags: [data.style, "AI Generated"],
         isGenerated: true,
       };
+
       setGeneratedImage(newImage);
       addToHistory(newImage);
+    } catch (error: any) {
+      console.error("Generation failed:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message ||
+          "Failed to generate image. Please try again.",
+      );
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const handleSave = () => {
     if (generatedImage) {
       addFavorite(generatedImage);
-      Alert.alert('Success', 'Image saved to favorites!');
+      Alert.alert("Success", "Image saved to favorites!");
+    }
+  };
+
+  const createFileName = () => {
+    const safePrompt = (generatedImage?.title || prompt || "aura-pixels")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40);
+
+    return `${safePrompt || "aura-pixels"}-${Date.now()}.png`;
+  };
+
+  const handleDownload = async () => {
+    if (!generatedImage?.url) {
+      Alert.alert("Error", "Generate an image first.");
+      return;
+    }
+
+    const fileName = createFileName();
+
+    try {
+      if (Platform.OS === "web") {
+        const link = document.createElement("a");
+        link.href = generatedImage.url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const base64Data = generatedImage.url.startsWith("data:")
+          ? generatedImage.url.split(",")[1]
+          : generatedImage.url;
+
+        const destination = new File(Paths.document, fileName);
+        destination.write(base64Data, { encoding: "base64" });
+
+        Alert.alert("Download complete", `Saved to ${destination.uri}`);
+      }
+    } catch (error) {
+      console.error("Download failed:", error);
+      Alert.alert("Error", "Failed to download image. Please try again.");
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+      >
         <Text style={styles.headerTitle}>Create Magic</Text>
-        <Text style={styles.headerSubtitle}>Transform your words into stunning wallpapers</Text>
+        <Text style={styles.headerSubtitle}>
+          Transform your words into stunning wallpapers
+        </Text>
 
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
-            placeholder="Describe your perfect wallpaper..."
+            placeholder="Describe your perfect wallpaper (max 200 chars)..."
             placeholderTextColor={COLORS.textSecondary}
             multiline
             numberOfLines={4}
             value={prompt}
             onChangeText={setPrompt}
             textAlignVertical="top"
+            maxLength={200}
           />
+          <Text style={styles.charCount}>{prompt.length}/200</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Art Style</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipContent}>
-          {STYLES.map(style => (
-            <TouchableOpacity 
-              key={style} 
-              style={[styles.chip, activeStyle === style && styles.activeChip]}
-              onPress={() => setActiveStyle(style)}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipContent}
+        >
+          {STYLES.map((style) => (
+            <TouchableOpacity
+              key={style.value}
+              style={[
+                styles.chip,
+                activeStyle === style.value && styles.activeChip,
+              ]}
+              onPress={() => setActiveStyle(style.value)}
             >
-              <Text style={[styles.chipText, activeStyle === style && styles.activeChipText]}>{style}</Text>
+              <Text
+                style={[
+                  styles.chipText,
+                  activeStyle === style.value && styles.activeChipText,
+                ]}
+              >
+                {style.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         <Text style={styles.sectionTitle}>Resolution</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipContent}>
-          {RESOLUTIONS.map(res => (
-            <TouchableOpacity 
-              key={res} 
-              style={[styles.chip, activeRes === res && styles.activeChip]}
-              onPress={() => setActiveRes(res)}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipContent}
+        >
+          {RESOLUTIONS.map((res) => (
+            <TouchableOpacity
+              key={res.value}
+              style={[
+                styles.chip,
+                activeRes === res.value && styles.activeChip,
+              ]}
+              onPress={() => setActiveRes(res.value)}
             >
-              <Text style={[styles.chipText, activeRes === res && styles.activeChipText]}>{res}</Text>
+              <Text
+                style={[
+                  styles.chipText,
+                  activeRes === res.value && styles.activeChipText,
+                ]}
+              >
+                {res.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -107,14 +229,29 @@ export const GenerateScreen = ({ route, navigation }: any) => {
           onPress={handleGenerate}
           isLoading={isGenerating}
           style={styles.generateBtn}
-          icon={!isGenerating && <Ionicons name="sparkles" size={20} color={COLORS.white} />}
+          icon={
+            !isGenerating && (
+              <Ionicons name="sparkles" size={20} color={COLORS.white} />
+            )
+          }
         />
 
         {generatedImage && (
           <View style={styles.resultContainer}>
             <Text style={styles.sectionTitle}>Result</Text>
             <View style={styles.imageWrapper}>
-              <Image source={{ uri: generatedImage.url }} style={styles.generatedImage} contentFit="cover" />
+              <Image
+                source={{ uri: generatedImage.url }}
+                style={[
+                  styles.generatedImage,
+                  activeRes === "portrait"
+                    ? styles.imagePortrait
+                    : activeRes === "landscape"
+                      ? styles.imageLandscape
+                      : styles.imageSquare,
+                ]}
+                contentFit="contain"
+              />
             </View>
             <View style={styles.resultActions}>
               <Button
@@ -122,13 +259,25 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                 variant="outline"
                 style={styles.actionBtn}
                 onPress={handleSave}
-                icon={<Ionicons name="heart-outline" size={20} color={COLORS.primary} />}
+                icon={
+                  <Ionicons
+                    name="heart-outline"
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                }
               />
               <Button
                 title="Download"
                 style={styles.actionBtn}
-                onPress={() => Alert.alert('Downloading...')}
-                icon={<Ionicons name="download-outline" size={20} color={COLORS.white} />}
+                onPress={handleDownload}
+                icon={
+                  <Ionicons
+                    name="download-outline"
+                    size={20}
+                    color={COLORS.white}
+                  />
+                }
               />
             </View>
           </View>
@@ -149,7 +298,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: COLORS.primary,
     marginBottom: SIZES.xs,
   },
@@ -169,9 +318,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.text,
   },
+  charCount: {
+    textAlign: "right",
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 8,
+  },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.primary,
     marginBottom: SIZES.sm,
   },
@@ -187,14 +342,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   activeChip: {
     backgroundColor: COLORS.primary,
   },
   chipText: {
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   activeChipText: {
     color: COLORS.white,
@@ -208,15 +363,26 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     borderRadius: SIZES.radius,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: SIZES.md,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
   generatedImage: {
-    width: '100%',
-    height: 400,
+    width: "100%",
+  },
+  imagePortrait: {
+    aspectRatio: 9 / 16,
+  },
+  imageLandscape: {
+    aspectRatio: 16 / 9,
+  },
+  imageSquare: {
+    aspectRatio: 1,
   },
   resultActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: SIZES.md,
   },
   actionBtn: {

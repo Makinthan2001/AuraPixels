@@ -1,32 +1,50 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../lib/prisma';
+import { AIService, AIStyle, AISize } from '../services/ai.service';
 
-export const generateWallpaper = async (req: AuthRequest, res: Response) => {
+export const generateWallpaper = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { prompt } = req.body;
+    const { prompt, style = 'cinematic', size = 'portrait' } = req.body;
     const userId = req.user?.id;
 
     if (!prompt) {
-      res.status(400);
-      throw new Error('Prompt is required');
+      res.status(400).json({ message: 'Prompt is required' });
+      return;
+    }
+
+    if (prompt.length > 200) {
+      res.status(400).json({ message: 'Prompt must be 200 characters or less' });
+      return;
+    }
+
+    const validStyles: AIStyle[] = ['cinematic', 'anime', 'minimal', 'abstract', 'realistic'];
+    if (!validStyles.includes(style)) {
+      res.status(400).json({ message: 'Invalid style' });
+      return;
+    }
+
+    const validSizes: AISize[] = ['square', 'portrait', 'landscape'];
+    if (!validSizes.includes(size)) {
+      res.status(400).json({ message: 'Invalid size' });
+      return;
     }
 
     if (!userId) {
-      res.status(401);
-      throw new Error('Not authorized');
+      res.status(401).json({ message: 'Not authorized' });
+      return;
     }
 
-    // Mock AI Generation (In production, call DALL-E or Midjourney API here)
-    const mockGeneratedUrl = `https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2574&auto=format&fit=crop&sig=${Math.random()}`;
+    // Call AIService to get enhanced prompt and image URL (base64)
+    const generatedData = await AIService.generateImage(prompt, style as AIStyle, size as AISize);
 
     // Save to wallpapers table and history table using Prisma transaction
     const [wallpaper, history] = await prisma.$transaction([
       prisma.wallpaper.create({
         data: {
-          imageUrl: mockGeneratedUrl,
-          prompt,
-          tags: ['AI Generated'],
+          imageUrl: generatedData.imageUrl, // storing base64 for now
+          prompt: generatedData.enhancedPrompt,
+          tags: ['AI Generated', style],
         },
         select: {
           id: true,
@@ -36,14 +54,24 @@ export const generateWallpaper = async (req: AuthRequest, res: Response) => {
       prisma.history.create({
         data: {
           userId,
-          prompt,
-          imageUrl: mockGeneratedUrl,
+          prompt: generatedData.enhancedPrompt,
+          imageUrl: generatedData.imageUrl,
         }
       })
     ]);
 
-    res.status(201).json(wallpaper);
+    res.status(201).json({
+      prompt: generatedData.enhancedPrompt,
+      style: style,
+      size: generatedData.size,
+      imageUrl: wallpaper.imageUrl
+    });
   } catch (error: any) {
-    res.status(res.statusCode === 200 ? 500 : res.statusCode).json({ message: error.message });
+    console.error('AI Generation Error:', error);
+    const status = typeof error.status === 'number' ? error.status : (res.statusCode !== 200 ? res.statusCode : 500);
+    res.status(status).json({ 
+      message: error.message || 'An unexpected error occurred during image generation.',
+      details: error.stack // Optional: remove in production
+    });
   }
 };

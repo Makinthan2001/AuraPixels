@@ -1,14 +1,12 @@
 import React, { useState, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components/Button';
-import { COLORS, SIZES, SHADOWS } from '../utils/constants';
+import { COLORS, SIZES } from '../utils/constants';
 import { AuthContext } from '../context/AuthContext';
 
-const bgImage = require('../../assets/images/img_4.png');
-const logo = require('../../assets/images/logo.svg');
+const headerImage = require('../../assets/images/logo.svg');
 
 export const VerifyOTPScreen = ({ navigation, route }: any) => {
   const { name, email, password } = route.params || {};
@@ -23,7 +21,6 @@ export const VerifyOTPScreen = ({ navigation, route }: any) => {
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (value !== '' && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -45,7 +42,6 @@ export const VerifyOTPScreen = ({ navigation, route }: any) => {
     try {
       setError(null);
       await verifyOTP(name, email, password, otpString);
-      // AuthContext will automatically handle the redirection once user is set
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
     }
@@ -55,39 +51,26 @@ export const VerifyOTPScreen = ({ navigation, route }: any) => {
     try {
       setError(null);
       await registerInitiate(email);
-      alert('New OTP sent to your email');
     } catch (err: any) {
       setError('Failed to resend OTP. Please try again later.');
     }
   };
 
   return (
-    <View style={styles.root}>
-      <View style={StyleSheet.absoluteFill}>
-        <Image source={bgImage} style={styles.bgImage} contentFit="cover" />
-        <LinearGradient
-          colors={['rgba(240, 238, 235, 0.4)', 'rgba(235, 232, 228, 0.7)', '#EAE6E1', '#E5E0DA']}
-          locations={[0, 0.4, 0.7, 1]}
-          style={styles.overlay}
-        />
-      </View>
+    <SafeAreaView style={styles.root}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
 
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.container}
-        >
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
-          </TouchableOpacity>
+          <Image 
+            source={headerImage} 
+            style={styles.headerImage} 
+            contentFit="cover"
+          />
 
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Image source={logo} style={styles.logoIcon} contentFit="contain" />
-            </View>
+          <View style={styles.titleContainer}>
             <Text style={styles.title}>Verify Email</Text>
             <Text style={styles.subtitle}>
               We've sent a 6-digit code to{'\n'}
@@ -107,7 +90,9 @@ export const VerifyOTPScreen = ({ navigation, route }: any) => {
               {otp.map((digit, index) => (
                 <TextInput
                   key={index}
-                  ref={(el) => (inputRefs.current[index] = el)}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
                   style={[styles.otpInput, digit !== '' && styles.otpInputActive]}
                   value={digit}
                   onChangeText={(value) => handleOtpChange(value, index)}
@@ -115,6 +100,7 @@ export const VerifyOTPScreen = ({ navigation, route }: any) => {
                   keyboardType="number-pad"
                   maxLength={1}
                   selectTextOnFocus
+                  autoFocus={index === 0}
                 />
               ))}
             </View>
@@ -133,75 +119,60 @@ export const VerifyOTPScreen = ({ navigation, route }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  bgImage: {
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  safeArea: {
-    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   container: {
-    flex: 1,
-    padding: SIZES.lg,
+    padding: 24,
+    flexGrow: 1,
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SIZES.lg,
-    ...SHADOWS.subtle,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  header: {
-    marginBottom: SIZES.xxl,
+  headerImage: {
+    width: 150,
+    height: 150,
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
+  titleContainer: {
+    marginBottom: 32,
     alignItems: 'center',
-  },
-  logoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SIZES.md,
-    ...SHADOWS.medium,
-  },
-  logoIcon: {
-    width: 100,
-    height: 100,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: SIZES.xs,
+    color: '#0F172A',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+    fontSize: 15,
+    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   emailText: {
     fontWeight: '600',
-    color: COLORS.primary,
+    color: '#1E293B',
   },
   form: {
-    gap: SIZES.lg,
+    gap: 24,
   },
   otpContainer: {
     flexDirection: 'row',
@@ -212,49 +183,57 @@ const styles = StyleSheet.create({
   otpInput: {
     width: 48,
     height: 56,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: '#E2E8F0',
     textAlign: 'center',
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.primary,
-    ...SHADOWS.subtle,
+    color: '#0F172A',
   },
   otpInputActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: '#fff',
+    borderColor: '#4F46E5',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   verifyButton: {
-    marginTop: SIZES.md,
+    backgroundColor: '#1E293B',
+    height: 56,
+    borderRadius: 12,
   },
   resendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: SIZES.sm,
   },
   resendText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: '#64748B',
   },
   resendAction: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: '#4F46E5',
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
-    padding: 10,
+    backgroundColor: '#FEF2F2',
+    padding: 12,
     borderRadius: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
   },
   errorText: {
-    color: '#FF5252',
+    color: '#DC2626',
     fontSize: 14,
     fontWeight: '500',
   },
 });
+

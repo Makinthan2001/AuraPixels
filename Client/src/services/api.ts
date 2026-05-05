@@ -3,7 +3,7 @@ import { storage } from '../utils/storage';
 import Constants from 'expo-constants';
 
 // For physical devices, you should replace 'localhost' with your machine's IP address.
-// Example: 'http://192.168.1.100:5000/api'
+// Example: 'http://192.168.1.100:5001/api'
 const BASE_URL = 'http://localhost:5001/api';
 
 const apiClient = axios.create({
@@ -65,7 +65,7 @@ export const api = {
   getWallpaperById: (id: string) => apiClient.get(`/wallpapers/${id}`),
 
   // AI
-  generateWallpaper: (prompt: string) => apiClient.post('/ai/generate', { prompt }),
+  generateWallpaper: (prompt: string, style?: string, size?: string) => apiClient.post('/ai/generate', { prompt, style, size }),
 
   // Favorites
   getFavorites: (userId: number) => apiClient.get(`/favorites/${userId}`),

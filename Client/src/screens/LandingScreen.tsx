@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.subtle,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#1E293B',
   },
   primaryButtonText: {
     color: COLORS.white,
