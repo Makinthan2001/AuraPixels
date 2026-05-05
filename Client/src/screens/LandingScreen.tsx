@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
+
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,19 +30,19 @@ export const LandingScreen = ({ navigation }: any) => {
       {/* Content Wrapper */}
       <View style={styles.contentWrapper}>
         {/* Top Section: Logo */}
-        <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.header}>
+        <View style={styles.header}>
           <View >
             <Image source={logo} style={styles.logoIcon} contentFit="contain" />
           </View>
           <Text style={styles.logoText}>AI-powered wallpaper generation</Text>
-        </Animated.View>
+        </View>
 
         {/* Middle Section: Content Area */}
         <View style={styles.mainContent}>
           
 
           {/* Bento-style Preview Grid */}
-          <Animated.View entering={FadeInUp.duration(800).delay(400).springify()} style={styles.gridContainer}>
+          <View style={styles.gridContainer}>
             <View style={styles.gridLeft}>
               <Image source={art1} style={styles.artImage} contentFit="cover" />
             </View>
@@ -54,7 +54,7 @@ export const LandingScreen = ({ navigation }: any) => {
                 <Ionicons name="color-palette" size={32} color={COLORS.primary} />
               </View>
             </View>
-          </Animated.View>
+          </View>
         </View>
 
         {/* Bottom Section: Actions */}

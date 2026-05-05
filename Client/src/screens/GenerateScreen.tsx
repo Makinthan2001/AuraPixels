@@ -295,10 +295,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
               contentContainerStyle={styles.horizontalScroll}
             >
               {ART_STYLES.map((style, index) => (
-                <Animated.View
-                  key={style.id}
-                  entering={FadeInRight.delay(index * 100)}
-                >
+                <View key={style.id}>
                   <TouchableOpacity
                     onPress={() => setActiveStyle(style.id)}
                     style={[
@@ -323,7 +320,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                       </Text>
                     </View>
                   </TouchableOpacity>
-                </Animated.View>
+                </View>
               ))}
             </ScrollView>
           </View>
@@ -337,10 +334,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
               contentContainerStyle={styles.horizontalScroll}
             >
               {RESOLUTIONS.map((res, index) => (
-                <Animated.View
-                  key={res.value}
-                  entering={FadeInRight.delay(index * 100 + 300)}
-                >
+                <View key={res.value}>
                   <TouchableOpacity
                     onPress={() => setActiveRes(res.value)}
                     style={[
@@ -357,7 +351,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                       {res.label}
                     </Text>
                   </TouchableOpacity>
-                </Animated.View>
+                </View>
               ))}
             </ScrollView>
           </View>
@@ -370,12 +364,13 @@ export const GenerateScreen = ({ route, navigation }: any) => {
       <BlurView intensity={20} tint="dark" style={styles.promptBarContainer}>
         <View style={styles.promptBar}>
           <TextInput
-            style={styles.input}
+            style={styles.input as any}
             placeholder="Describe your wallpaper..."
             placeholderTextColor={LUMINA_COLORS.outline}
             value={prompt}
             onChangeText={setPrompt}
             multiline={false}
+            underlineColorAndroid="transparent"
           />
           <TouchableOpacity
             style={[styles.generateButton, !prompt.trim() && { opacity: 0.5 }]}
@@ -397,7 +392,6 @@ export const GenerateScreen = ({ route, navigation }: any) => {
           </TouchableOpacity>
         </View>
       </BlurView>
-
     </View>
   );
 };
@@ -616,6 +610,11 @@ const styles = StyleSheet.create({
     color: LUMINA_COLORS.white,
     fontSize: 14,
     fontWeight: "500",
+    ...Platform.select({
+      web: {
+        outlineStyle: "none",
+      },
+    } as any),
   },
   generateButton: {
     flexDirection: "row",
