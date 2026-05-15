@@ -14,6 +14,8 @@ export default function TabLayout() {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'generate') {
             iconName = focused ? 'color-wand' : 'color-wand-outline';
+          } else if (route.name === 'history') {
+            iconName = focused ? 'time' : 'time-outline';
           } else if (route.name === 'favorites') {
             iconName = focused ? 'heart' : 'heart-outline';
           } else if (route.name === 'profile') {
@@ -22,10 +24,10 @@ export default function TabLayout() {
 
           return <Ionicons name={iconName} size={28} color={color} />;
         },
-        tabBarActiveTintColor: '#8ed5ff',
-        tabBarInactiveTintColor: '#87929a',
+        tabBarActiveTintColor: '#38bdf8',
+        tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
-          backgroundColor: '#0f1418',
+          backgroundColor: '#1e293b',
           borderTopWidth: 1,
           borderTopColor: 'rgba(255,255,255,0.05)',
           elevation: 0,
@@ -41,6 +43,7 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="generate" />
+      <Tabs.Screen name="history" />
       <Tabs.Screen name="favorites" />
       <Tabs.Screen name="profile" />
     </Tabs>

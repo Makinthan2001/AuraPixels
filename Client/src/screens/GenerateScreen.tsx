@@ -71,13 +71,13 @@ const RESOLUTIONS = [
 ];
 
 const LUMINA_COLORS = {
-  background: "#0f1418",
-  surface: "#1b2024",
-  primary: "#8ed5ff",
-  outline: "#87929a",
+  background: "#1e293b",
+  surface: "#334155",
+  primary: "#38bdf8",
+  outline: "#94a3b8",
   white: "#FFFFFF",
   glass: "rgba(255, 255, 255, 0.05)",
-  glassPill: "rgba(15, 20, 24, 0.8)",
+  glassPill: "rgba(30, 41, 59, 0.8)",
 };
 
 export const GenerateScreen = ({ route, navigation }: any) => {
@@ -135,6 +135,9 @@ export const GenerateScreen = ({ route, navigation }: any) => {
 
       setGeneratedImage(newImage);
       addToHistory(newImage);
+
+      // Server already saves history when generating via `/api/ai/generate`.
+      // No need to call `api.addHistory` here to avoid duplicate entries.
     } catch (error: any) {
       console.error("Generation failed:", error);
       Alert.alert(
@@ -179,8 +182,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
         return;
       }
 
-      const fileUri =
-        FileSystem.documentDirectory + `AuraPixels-${Date.now()}.png`;
+      const fileUri = `${FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? ""}AuraPixels-${Date.now()}.png`;
 
       if (generatedImage.url.startsWith("data:")) {
         const base64Data = generatedImage.url.split(",")[1];

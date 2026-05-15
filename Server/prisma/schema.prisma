@@ -65,10 +65,12 @@ model Favorite {
 }
 
 model History {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  prompt    String
-  imageUrl  String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  prompt     String
+  imageUrl   String
+  style      String?
+  resolution String?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 }

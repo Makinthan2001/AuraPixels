@@ -10,10 +10,10 @@ export const COLORS = {
   error: '#FF4C4C',
   success: '#4CAF50',
   lumina: {
-    background: '#0f1418',
-    surface: '#1b2024',
-    primary: '#8ed5ff',
-    outline: '#87929a',
+    background: '#1e293b',
+    surface: '#334155',
+    primary: '#38bdf8',
+    outline: '#94a3b8',
     white: '#FFFFFF',
     glass: 'rgba(255, 255, 255, 0.05)',
   }

@@ -56,6 +56,8 @@ export const generateWallpaper = async (req: AuthRequest, res: Response): Promis
           userId,
           prompt: generatedData.enhancedPrompt,
           imageUrl: generatedData.imageUrl,
+          style: style,
+          resolution: size,
         }
       })
     ]);
