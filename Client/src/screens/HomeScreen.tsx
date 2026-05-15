@@ -16,6 +16,7 @@ import { Image } from "expo-image";
 import { WallpaperCard } from "../components/WallpaperCard";
 import { COLORS, SIZES } from "../utils/constants";
 import { MOCK_CATEGORIES, MOCK_WALLPAPERS } from "../utils/mockData";
+import { TopBar } from "../components/TopBar";
 
 
 const { width } = Dimensions.get("window");
@@ -26,22 +27,11 @@ export const HomeScreen = ({ navigation }: any) => {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View style={styles.headerTop}>
-        <View>
-          <Text style={styles.greeting}>Good Morning,</Text>
-          <Text style={styles.title}>Discover Magic</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.profileBtn}
-          onPress={() => navigation.navigate("ProfileTab")}
-        >
-          <View style={styles.profileContainer}>
-            <Image
-              source="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop"
-              style={styles.profileImage}
-            />
-          </View>
-        </TouchableOpacity>
+      <TopBar title="Discover" />
+      
+      <View style={{ marginTop: 20 }}>
+        <Text style={styles.greeting}>Good Morning,</Text>
+        <Text style={styles.title}>Discover Magic</Text>
       </View>
 
       <View style={styles.searchContainer}>

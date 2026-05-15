@@ -24,6 +24,7 @@ import { HistoryGrid } from "../components/HistoryGrid";
 import { api } from "../services/api";
 import { FavoritesContext } from "../context/FavoritesContext";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { TopBar } from "../components/TopBar";
 
 const { width, height } = Dimensions.get("window");
 
@@ -179,15 +180,9 @@ export const HistoryScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
+      <TopBar title="History" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{ width: 60 }} />
-        <Text style={styles.headerTitle}>History</Text>
-        <TouchableOpacity style={styles.headerAction} onPress={handleClearAll}>
-          <Text style={styles.clearText}>Clear</Text>
-        </TouchableOpacity>
-      </View>
+      
 
       <View style={styles.content}>
         {/* Search */}
@@ -319,30 +314,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.background,
-  },
-  header: {
-    height: 60,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: THEME.text,
-    letterSpacing: 0.5,
-  },
-  headerAction: {
-    width: 60,
-    alignItems: "flex-end",
-  },
-  clearText: {
-    color: THEME.danger,
-    fontSize: 14,
-    fontWeight: "600",
   },
   content: {
     flex: 1,

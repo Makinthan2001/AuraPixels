@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FavoritesContext } from '../context/FavoritesContext';
 import { WallpaperCard } from '../components/WallpaperCard';
 import { COLORS, SIZES } from '../utils/constants';
+import { TopBar } from '../components/TopBar';
 
 export const FavoritesScreen = ({ navigation }: any) => {
   const { favorites } = useContext(FavoritesContext);
@@ -20,8 +21,9 @@ export const FavoritesScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <TopBar title="Favorites" />
+      
       <View style={styles.header}>
-        <Text style={styles.title}>Your Favorites</Text>
         <Text style={styles.subtitle}>{favorites.length} saved wallpapers</Text>
       </View>
 

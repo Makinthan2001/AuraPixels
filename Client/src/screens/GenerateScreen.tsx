@@ -16,6 +16,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as MediaLibrary from "expo-media-library";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import { TopBar } from "../components/TopBar";
 import Animated, {
   FadeInDown,
   FadeInRight,
@@ -209,17 +210,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
     <View style={styles.safeArea}>
       <SafeAreaView style={{ flex: 1 }}>
         {/* Top Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="menu" size={24} color={LUMINA_COLORS.outline} />
-          </TouchableOpacity>
-          <View style={styles.profileContainer}>
-            <Image
-              source="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop"
-              style={styles.profileImage}
-            />
-          </View>
-        </View>
+        <TopBar title="Lumina AI" />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
