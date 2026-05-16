@@ -6,6 +6,7 @@ import wallpaperRoutes from './routes/wallpaper.routes';
 import aiRoutes from './routes/ai.routes';
 import favoriteRoutes from './routes/favorite.routes';
 import historyRoutes from './routes/history.routes';
+import feedRoutes from './routes/feed.routes';
 import { errorHandler } from './middlewares/error.middleware';
 
 dotenv.config();
@@ -14,16 +15,30 @@ const app = express();
 
 // CORS configuration for OAuth flows
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://localhost:8081',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:8081',
-  ],
+  origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    const allowedOrigins = new Set([
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'http://localhost:8081',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:8081',
+    ]);
+
+    callback(null, allowedOrigins.has(origin));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -31,8 +46,9 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.options(/.*/, cors(corsOptions));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // COOP and COEP headers for OAuth popup support
 app.use((req, res, next) => {
@@ -47,6 +63,7 @@ app.use('/api/wallpapers', wallpaperRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/history', historyRoutes);
+app.use('/api/feed', feedRoutes);
 
 // Root route
 app.get('/', (req, res) => {

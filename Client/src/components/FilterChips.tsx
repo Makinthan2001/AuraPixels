@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 
 const CATEGORIES = [
-  'All', 'Cinematic', 'Anime', 'Minimal', 'Abstract', 'Cyberpunk'
+  'All', 'Anime', 'Cinematic', 'Minimal', 'Abstract', 'Cyberpunk'
 ];
 
 interface FilterChipsProps {

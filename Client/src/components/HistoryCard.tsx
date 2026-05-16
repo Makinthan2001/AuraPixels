@@ -4,16 +4,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Alert,
+  useWindowDimensions,
 } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
-
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 60) / 2;
+import { WallpaperImage } from "./WallpaperImage";
+import { formatResolutionLabel } from "../utils/image";
 
 interface HistoryItem {
   id: string;
@@ -50,6 +48,8 @@ export const HistoryCard = ({
   onFavorite,
   onDelete,
 }: HistoryCardProps) => {
+  const { width } = useWindowDimensions();
+  const CARD_WIDTH = Math.max(160, (width - 60) / 2);
   const formattedDate = new Date(item.createdAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -62,20 +62,20 @@ export const HistoryCard = ({
   return (
     <Animated.View
       entering={FadeInDown.delay(index * 100).duration(500)}
-      style={styles.container}
+      style={[styles.container, { width: CARD_WIDTH }]}
     >
-      <View style={styles.card}>
+      <View style={[styles.card, { aspectRatio: 0.86 }]}>
         {/* Image — tappable to open preview */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={onPress}
           style={styles.imageContainer}
         >
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.image}
+          <WallpaperImage
+            uri={item.imageUrl}
             contentFit="cover"
-            transition={300}
+            borderRadius={24}
+            style={styles.image}
           />
         </TouchableOpacity>
 
@@ -104,13 +104,7 @@ export const HistoryCard = ({
                   ]}
                 >
                   <Text style={[styles.tagText, { color: THEME.accent }]}>
-                    {item.resolution === "portrait"
-                      ? "9:16"
-                      : item.resolution === "landscape"
-                        ? "16:9"
-                        : item.resolution === "square"
-                          ? "1:1"
-                          : item.resolution}
+                    {formatResolutionLabel(item.resolution)}
                   </Text>
                 </View>
               )}
@@ -158,14 +152,12 @@ export const HistoryCard = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: CARD_WIDTH,
     marginBottom: 20,
   },
   card: {
     backgroundColor: THEME.card,
     borderRadius: 24,
     overflow: "hidden",
-    height: 300,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.05)",
   },

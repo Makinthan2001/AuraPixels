@@ -1,7 +1,13 @@
-import React from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
-import { HistoryCard } from './HistoryCard';
-import { EmptyHistory } from './EmptyHistory';
+import React from "react";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Platform,
+  useWindowDimensions,
+} from "react-native";
+import { HistoryCard } from "./HistoryCard";
+import { EmptyHistory } from "./EmptyHistory";
 
 interface HistoryItem {
   id: string;
@@ -21,22 +27,23 @@ interface HistoryGridProps {
   onDelete: (item: HistoryItem) => void;
 }
 
-const THEME = {
-  accent: '#38bdf8',
-};
-
-export const HistoryGrid = ({ 
-  data, 
-  loading, 
-  onItemPress, 
-  onDownload, 
-  onFavorite, 
-  onDelete 
+export const HistoryGrid = ({
+  data,
+  loading,
+  onItemPress,
+  onDownload,
+  onFavorite,
+  onDelete,
 }: HistoryGridProps) => {
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === "web" && width >= 1024;
+
   if (loading && data.length === 0) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={THEME.accent} />
+      <View style={styles.skeletonGrid}>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <View key={`history-skeleton-${index}`} style={styles.skeletonCard} />
+        ))}
       </View>
     );
   }
@@ -57,7 +64,10 @@ export const HistoryGrid = ({
         />
       )}
       columnWrapperStyle={styles.columnWrapper}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        isDesktopWeb && styles.desktopContent,
+      ]}
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={<EmptyHistory />}
     />
@@ -65,18 +75,33 @@ export const HistoryGrid = ({
 };
 
 const styles = StyleSheet.create({
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 50,
+  skeletonGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  skeletonCard: {
+    width: "48%",
+    aspectRatio: 0.82,
+    borderRadius: 24,
+    marginBottom: 20,
+    backgroundColor: "#22304a",
+    opacity: 0.7,
   },
   columnWrapper: {
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingHorizontal: 20,
+    width: "100%",
   },
   contentContainer: {
     paddingBottom: 100,
     paddingTop: 10,
+    width: "100%",
+  },
+  desktopContent: {
+    alignSelf: "center",
+    maxWidth: 1280,
   },
 });

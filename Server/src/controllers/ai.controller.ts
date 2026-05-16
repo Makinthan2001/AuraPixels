@@ -38,29 +38,34 @@ export const generateWallpaper = async (req: AuthRequest, res: Response): Promis
     // Call AIService to get enhanced prompt and image URL (base64)
     const generatedData = await AIService.generateImage(prompt, style as AIStyle, size as AISize);
 
-    // Save to wallpapers table and history table using Prisma transaction
-    const [wallpaper, history] = await prisma.$transaction([
-      prisma.wallpaper.create({
-        data: {
-          imageUrl: generatedData.imageUrl, // storing base64 for now
-          prompt: generatedData.enhancedPrompt,
-          tags: ['AI Generated', style],
-        },
-        select: {
-          id: true,
-          imageUrl: true,
-        }
-      }),
-      prisma.history.create({
+    const wallpaper = await prisma.wallpaper.create({
+      data: {
+        imageUrl: generatedData.imageUrl,
+        prompt: generatedData.enhancedPrompt,
+        style: style,
+        resolution: size,
+        tags: ["AI Generated", style],
+        userId,
+      },
+      select: {
+        id: true,
+        imageUrl: true,
+      },
+    });
+
+    try {
+      await prisma.history.create({
         data: {
           userId,
           prompt: generatedData.enhancedPrompt,
           imageUrl: generatedData.imageUrl,
           style: style,
           resolution: size,
-        }
-      })
-    ]);
+        },
+      });
+    } catch (historyError) {
+      console.warn('Failed to save generation history:', historyError);
+    }
 
     res.status(201).json({
       prompt: generatedData.enhancedPrompt,

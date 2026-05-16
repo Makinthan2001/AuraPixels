@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -12,11 +18,10 @@ import {
   StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import * as FileSystem from "expo-file-system/legacy";
 import * as MediaLibrary from "expo-media-library";
 import { BlurView } from "expo-blur";
-import Animated, { FadeIn, FadeInUp, SlideInUp } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { SearchBar } from "../components/SearchBar";
 import { FilterChips } from "../components/FilterChips";
@@ -25,6 +30,8 @@ import { api } from "../services/api";
 import { FavoritesContext } from "../context/FavoritesContext";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { TopBar } from "../components/TopBar";
+import { WallpaperImage } from "../components/WallpaperImage";
+import { getAspectRatioFromResolution } from "../utils/image";
 
 const { width, height } = Dimensions.get("window");
 
@@ -42,10 +49,11 @@ export const HistoryScreen = () => {
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  
+
   // Custom Modal States
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -67,17 +75,13 @@ export const HistoryScreen = () => {
     }
   }, []);
 
-  const handleClearAll = useCallback(() => {
-    setIsClearAllModalVisible(true);
-  }, []);
-
   const executeClearAll = useCallback(async () => {
     try {
       await api.clearAllHistory();
       setHistoryItems([]);
       setIsClearAllModalVisible(false);
       Alert.alert("Success", "History cleared");
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to clear history");
     }
   }, []);
@@ -94,7 +98,7 @@ export const HistoryScreen = () => {
       setHistoryItems((prev) => prev.filter((i) => i.id !== itemToDelete.id));
       setIsDeleteModalVisible(false);
       setItemToDelete(null);
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to delete history item");
     }
   }, [itemToDelete]);
@@ -141,15 +145,18 @@ export const HistoryScreen = () => {
     }
   }, []);
 
-  const handleFavorite = useCallback((item: any) => {
-    addFavorite({
-      id: item.id.toString(),
-      url: item.imageUrl,
-      prompt: item.prompt,
-      isGenerated: true,
-    });
-    Alert.alert("Success", "Added to favorites!");
-  }, [addFavorite]);
+  const handleFavorite = useCallback(
+    (item: any) => {
+      addFavorite({
+        id: item.id.toString(),
+        url: item.imageUrl,
+        prompt: item.prompt,
+        isGenerated: true,
+      });
+      Alert.alert("Success", "Added to favorites!");
+    },
+    [addFavorite],
+  );
 
   const openPreview = useCallback((item: any) => {
     setSelectedItem(item);
@@ -161,12 +168,27 @@ export const HistoryScreen = () => {
   }, [fetchHistory]);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 220);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const filterKey = useMemo(
+    () => `${selectedCategory}::${debouncedSearchQuery.trim().toLowerCase()}`,
+    [selectedCategory, debouncedSearchQuery],
+  );
+
+  useEffect(() => {
     let result = historyItems;
-    if (searchQuery) {
+
+    if (debouncedSearchQuery) {
       result = result.filter((item) =>
-        item.prompt.toLowerCase().includes(searchQuery.toLowerCase()),
+        item.prompt.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
       );
     }
+
     if (selectedCategory !== "All") {
       result = result.filter(
         (item) =>
@@ -174,15 +196,14 @@ export const HistoryScreen = () => {
           item.style.toLowerCase() === selectedCategory.toLowerCase(),
       );
     }
+
     setFilteredItems(result);
-  }, [searchQuery, selectedCategory, historyItems]);
+  }, [debouncedSearchQuery, selectedCategory, historyItems]);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <TopBar title="History" />
-
-      
 
       <View style={styles.content}>
         {/* Search */}
@@ -195,14 +216,16 @@ export const HistoryScreen = () => {
         />
 
         {/* Grid */}
-        <HistoryGrid
-          data={filteredItems}
-          loading={loading}
-          onItemPress={openPreview}
-          onDownload={handleDownload}
-          onFavorite={handleFavorite}
-          onDelete={handleDelete}
-        />
+        <Animated.View key={filterKey} entering={FadeIn.duration(180)}>
+          <HistoryGrid
+            data={filteredItems}
+            loading={loading}
+            onItemPress={openPreview}
+            onDownload={handleDownload}
+            onFavorite={handleFavorite}
+            onDelete={handleDelete}
+          />
+        </Animated.View>
       </View>
 
       {/* Fullscreen Preview Modal */}
@@ -231,10 +254,14 @@ export const HistoryScreen = () => {
                 <Ionicons name="close" size={28} color="#fff" />
               </TouchableOpacity>
 
-              <Image
-                source={{ uri: selectedItem.imageUrl }}
-                style={styles.fullImage}
+              <WallpaperImage
+                uri={selectedItem.imageUrl}
+                aspectRatio={getAspectRatioFromResolution(
+                  selectedItem.resolution,
+                )}
                 contentFit="contain"
+                borderRadius={28}
+                style={styles.fullImage}
               />
 
               <BlurView intensity={40} tint="dark" style={styles.previewInfo}>
@@ -331,8 +358,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   fullImage: {
-    width: width,
-    height: height * 0.7,
+    width: width - 40,
+    maxHeight: height * 0.68,
+    alignSelf: "center",
+    marginBottom: 16,
   },
   closeButton: {
     position: "absolute",

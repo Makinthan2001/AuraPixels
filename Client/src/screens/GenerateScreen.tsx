@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -14,21 +14,24 @@ import {
 import { Image } from "expo-image";
 import * as FileSystem from "expo-file-system/legacy";
 import * as MediaLibrary from "expo-media-library";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { TopBar } from "../components/TopBar";
+import { WallpaperImage } from "../components/WallpaperImage";
 import Animated, {
   FadeInDown,
-  FadeInRight,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import { COLORS, SIZES } from "../utils/constants";
 import { FavoritesContext } from "../context/FavoritesContext";
 import { api } from "../services/api";
+import {
+  GENERATION_STATUS_MESSAGES,
+  getAspectRatioFromResolution,
+} from "../utils/image";
 
 const ART_STYLES = [
   {
@@ -87,10 +90,43 @@ export const GenerateScreen = ({ route, navigation }: any) => {
   const [activeStyle, setActiveStyle] = useState("cinematic");
   const [activeRes, setActiveRes] = useState("portrait");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState(
+    GENERATION_STATUS_MESSAGES[0],
+  );
+  const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedImage, setGeneratedImage] = useState<any>(null);
 
-  const { addToHistory, addFavorite } = useContext(FavoritesContext);
+  const { addToHistory } = useContext(FavoritesContext);
   const spinValue = useSharedValue(0);
+  const lastGenerateAtRef = useRef(0);
+
+  const previewAspectRatio = getAspectRatioFromResolution(activeRes);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setGenerationStatus(GENERATION_STATUS_MESSAGES[0]);
+      setGenerationProgress(0);
+      return;
+    }
+
+    let messageIndex = 0;
+    setGenerationStatus(GENERATION_STATUS_MESSAGES[messageIndex]);
+    setGenerationProgress(12);
+
+    const messageTimer = setInterval(() => {
+      messageIndex = (messageIndex + 1) % GENERATION_STATUS_MESSAGES.length;
+      setGenerationStatus(GENERATION_STATUS_MESSAGES[messageIndex]);
+    }, 1800);
+
+    const progressTimer = setInterval(() => {
+      setGenerationProgress((current) => Math.min(current + 12, 92));
+    }, 1100);
+
+    return () => {
+      clearInterval(messageTimer);
+      clearInterval(progressTimer);
+    };
+  }, [isGenerating, spinValue]);
 
   useEffect(() => {
     if (isGenerating) {
@@ -114,8 +150,16 @@ export const GenerateScreen = ({ route, navigation }: any) => {
       return;
     }
 
+    if (isGenerating || Date.now() - lastGenerateAtRef.current < 1200) {
+      return;
+    }
+
+    lastGenerateAtRef.current = Date.now();
+
     setIsGenerating(true);
     setGeneratedImage(null);
+    setGenerationProgress(0);
+    setGenerationStatus("Generating your wallpaper...");
 
     try {
       const response = await api.generateWallpaper(
@@ -135,25 +179,24 @@ export const GenerateScreen = ({ route, navigation }: any) => {
       };
 
       setGeneratedImage(newImage);
+      setGenerationProgress(100);
       addToHistory(newImage);
 
       // Server already saves history when generating via `/api/ai/generate`.
       // No need to call `api.addHistory` here to avoid duplicate entries.
     } catch (error: any) {
       console.error("Generation failed:", error);
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Failed to generate image.",
-      );
+      const errorMessage =
+        error.code === "ECONNABORTED"
+          ? "Generation timed out. Try a shorter prompt or a smaller resolution."
+          : /loading|prepare/i.test(
+                error.response?.data?.message || error.message || "",
+              )
+            ? "Preparing AI model..."
+            : error.response?.data?.message || "Failed to generate image.";
+      Alert.alert("Error", errorMessage);
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-  const handleSave = () => {
-    if (generatedImage) {
-      addFavorite(generatedImage);
-      Alert.alert("Success", "Saved to favorites!");
     }
   };
 
@@ -219,15 +262,17 @@ export const GenerateScreen = ({ route, navigation }: any) => {
           {/* Preview Container */}
           <Animated.View
             entering={FadeInDown.duration(800)}
-            style={styles.previewCard}
+            style={[styles.previewCard, { aspectRatio: previewAspectRatio }]}
           >
             <View style={styles.previewBackground} />
 
             {generatedImage ? (
-              <Image
-                source={{ uri: generatedImage.url }}
+              <WallpaperImage
+                uri={generatedImage.url}
+                aspectRatio={previewAspectRatio}
+                contentFit="contain"
+                borderRadius={40}
                 style={styles.previewImage}
-                contentFit="cover"
               />
             ) : (
               <View style={styles.placeholderContainer}>
@@ -240,7 +285,21 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                         color={LUMINA_COLORS.primary}
                       />
                     </Animated.View>
-                    <Text style={styles.loadingText}>Generating Magic...</Text>
+                    <Text style={styles.loadingText}>{generationStatus}</Text>
+                    <Text style={styles.loadingSubtext}>
+                      This may take a few seconds depending on the model load.
+                    </Text>
+                    <View style={styles.progressTrack}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${Math.max(generationProgress, 10)}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.progressText}>
+                      {Math.round(generationProgress)}%
+                    </Text>
                   </View>
                 ) : (
                   <>
@@ -430,7 +489,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   previewCard: {
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
     aspectRatio: 0.8,
+    maxHeight: 680,
     borderRadius: 40,
     overflow: "hidden",
     backgroundColor: LUMINA_COLORS.surface,
@@ -484,6 +547,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: LUMINA_COLORS.primary,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  loadingSubtext: {
+    fontSize: 12,
+    color: LUMINA_COLORS.outline,
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 14,
+    maxWidth: 240,
+  },
+  progressTrack: {
+    width: 220,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: LUMINA_COLORS.primary,
+  },
+  progressText: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: "800",
+    color: LUMINA_COLORS.white,
+    letterSpacing: 1,
   },
   previewActions: {
     position: "absolute",

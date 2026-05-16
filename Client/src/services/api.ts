@@ -5,8 +5,14 @@ import { Platform } from 'react-native';
 
 // Resolve API base URL for different environments (web / emulator / device)
 const getBaseUrl = () => {
+  const explicitUrl =
+    process.env.EXPO_PUBLIC_API_URL ||
+    process.env.API_URL ||
+    Constants.expoConfig?.extra?.apiUrl ||
+    (Constants as any).manifest?.extra?.apiUrl;
+
   // If an explicit env var is set, prefer it
-  if (process.env.API_URL) return process.env.API_URL;
+  if (explicitUrl) return explicitUrl;
 
   // Web: use window location
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -62,7 +68,7 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return apiClient(originalRequest);
         }
-      } catch (refreshError) {
+      } catch {
         // Refresh token expired or invalid - logout user
         await storage.deleteItem('accessToken');
         await storage.deleteItem('refreshToken');
@@ -86,7 +92,8 @@ export const api = {
   getWallpaperById: (id: string) => apiClient.get(`/wallpapers/${id}`),
 
   // AI
-  generateWallpaper: (prompt: string, style?: string, size?: string) => apiClient.post('/ai/generate', { prompt, style, size }),
+  generateWallpaper: (prompt: string, style?: string, size?: string) =>
+    apiClient.post('/ai/generate', { prompt, style, size }, { timeout: 120000 }),
 
   // Favorites
   getFavorites: (userId: number) => apiClient.get(`/favorites/${userId}`),
@@ -100,6 +107,13 @@ export const api = {
     apiClient.post('/history', data),
   deleteHistoryItem: (id: number) => apiClient.delete(`/history/${id}`),
   clearAllHistory: () => apiClient.delete('/history'),
+
+  // Feed
+  getFeed: (params?: { page?: number; limit?: number; search?: string; category?: string; style?: string }) => 
+    apiClient.get('/feed', { params }),
+  getTrending: () => apiClient.get('/feed/trending'),
+  toggleLike: (id: number) => apiClient.post(`/feed/${id}/like`),
+  getFeedDetails: (id: number) => apiClient.get(`/feed/${id}`),
 };
 
 export default apiClient;

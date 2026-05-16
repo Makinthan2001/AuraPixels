@@ -2,8 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const HF_API_URL = 'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell';
-const HF_API_KEY = process.env.HF_API_KEY || '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';
+const IMAGE_API_URL = 'https://image.pollinations.ai/prompt';
 
 export type AIStyle = 'cinematic' | 'anime' | 'minimal' | 'abstract' | 'cyberpunk' | 'realistic';
 export type AISize = 'square' | 'portrait' | 'landscape' | 'tablet' | 'ultrawide';
@@ -48,51 +47,36 @@ export class AIService {
     return SIZE_MAP[size] || SIZE_MAP.square;
   }
 
+  static async fetchImageAsDataUrl(url: string): Promise<string> {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      const error = new Error(
+        errorText || `HTTP error ${response.status}: ${response.statusText}`,
+      ) as Error & { status?: number };
+      error.status = response.status;
+      throw error;
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Image = Buffer.from(arrayBuffer).toString('base64');
+
+    return `data:${contentType};base64,${base64Image}`;
+  }
+
   static async generateImage(prompt: string, style: AIStyle, size: AISize) {
     const enhancedPrompt = this.enhancePrompt(prompt, style);
     const { width, height } = this.getSizeDimensions(size);
 
     console.log(`Generating image for prompt: "${enhancedPrompt}" with style: ${style}`);
 
-    const response = await fetch(HF_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${HF_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: enhancedPrompt,
-        parameters: {
-          width,
-          height,
-          negative_prompt: 'blurry, distorted, low quality, low resolution, ugly, deformed',
-          seed: Math.floor(Math.random() * 1000000), // Random seed for variety
-        },
-        options: {
-          use_cache: false // Disable HF cache
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      let errorMessage = 'Failed to generate image from Hugging Face';
-      try {
-        const errorText = await response.text();
-        const errorData = JSON.parse(errorText) as { error?: string };
-        errorMessage = errorData.error || errorText || errorMessage;
-      } catch (e) {
-        errorMessage = `HTTP error ${response.status}: ${response.statusText}`;
-      }
-      const error = new Error(`${errorMessage} (upstream status: ${response.status})`) as Error & { status?: number };
-      error.status = 502;
-      throw error;
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Image = Buffer.from(arrayBuffer).toString('base64');
+    const imageUrl = `${IMAGE_API_URL}/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&seed=${Math.floor(Math.random() * 1000000)}&nologo=true`;
+    const dataUrl = await this.fetchImageAsDataUrl(imageUrl);
     
     return {
-      imageUrl: `data:image/png;base64,${base64Image}`,
+      imageUrl: dataUrl,
       enhancedPrompt,
       size:
         size === 'portrait'

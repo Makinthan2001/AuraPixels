@@ -21,6 +21,9 @@ model User {
   wallpapers    Wallpaper[]
   favorites     Favorite[]
   history       History[]
+  likes         Like[]
+
+  @@index([name])
 }
 
 model Otp {
@@ -43,14 +46,28 @@ model RefreshToken {
 }
 
 model Wallpaper {
-  id        Int        @id @default(autoincrement())
-  imageUrl  String
-  prompt    String
-  tags      String[]
-  userId    Int?
-  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  favorites Favorite[]
-  createdAt DateTime   @default(now())
+  id         Int        @id @default(autoincrement())
+  imageUrl   String
+  prompt     String
+  category   String?
+  style      String?
+  resolution String?
+  tags       String[]
+  likesCount Int        @default(0)
+  userId     Int?
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  favorites  Favorite[]
+  likes      Like[]
+  createdAt  DateTime   @default(now())
+
+  @@index([userId])
+  @@index([category])
+  @@index([style])
+  @@index([category, createdAt])
+  @@index([style, createdAt])
+  @@index([createdAt])
+  @@index([likesCount])
+  @@index([userId, createdAt])
 }
 
 model Favorite {
@@ -62,6 +79,21 @@ model Favorite {
   createdAt   DateTime  @default(now())
 
   @@unique([userId, wallpaperId])
+  @@index([userId])
+}
+
+model Like {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  wallpaperId Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallpaper   Wallpaper @relation(fields: [wallpaperId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, wallpaperId])
+  @@index([userId])
+  @@index([wallpaperId])
+  @@index([userId, createdAt])
 }
 
 model History {
@@ -73,4 +105,8 @@ model History {
   resolution String?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([style])
+  @@index([createdAt])
 }
