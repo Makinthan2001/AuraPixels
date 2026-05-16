@@ -114,6 +114,13 @@ export const api = {
   getTrending: () => apiClient.get('/feed/trending'),
   toggleLike: (id: number) => apiClient.post(`/feed/${id}/like`),
   getFeedDetails: (id: number) => apiClient.get(`/feed/${id}`),
+
+  // User
+  getUserProfile: () => apiClient.get('/user/profile'),
+  updateUserProfile: (data: any) => apiClient.put('/user/profile', data),
+  uploadPhoto: (formData: any) => apiClient.post('/user/upload-photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 export default apiClient;

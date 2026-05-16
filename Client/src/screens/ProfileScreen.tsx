@@ -1,225 +1,251 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, StatusBar } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { 
+  StyleSheet, 
+  ScrollView, 
+  View, 
+  Text, 
+  StatusBar, 
+  Alert, 
+  ActivityIndicator,
+  Modal,
+  TouchableOpacity
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+
 import { AuthContext } from '../context/AuthContext';
 import { FavoritesContext } from '../context/FavoritesContext';
-import { WallpaperCard } from '../components/WallpaperCard';
-import { COLORS, SIZES, SHADOWS } from '../utils/constants';
+import { ProfileHeader } from '../components/ProfileHeader';
+import { ProfileStats } from '../components/ProfileStats';
+import { SettingsMenu } from '../components/SettingsMenu';
+import { EditProfileModal } from '../components/EditProfileModal';
+import { LogoutButton } from '../components/LogoutButton';
+import { api } from '../services/api';
+import { COLORS } from '../utils/constants';
 
 export const ProfileScreen = ({ navigation }: any) => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, setUser } = useContext(AuthContext);
   const { favorites, history } = useContext(FavoritesContext);
+  
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
-  const renderHeader = () => (
-    <View>
-      <View style={styles.profileHeader}>
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
-        </View>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
-        </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-          <Ionicons name="log-out-outline" size={24} color={COLORS.error} />
-        </TouchableOpacity>
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.getUserProfile();
+      setProfileData(response.data.data);
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+      // Fallback to context user if API fails
+      setProfileData({
+        name: user?.name || 'User',
+        email: user?.email || '',
+        profileImage: user?.profileImage,
+        generatedCount: history.length,
+        likedCount: 0,
+        favoritesCount: favorites.length,
+        joinedDate: 'May 2024'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (data: { name: string }) => {
+    try {
+      const response = await api.updateUserProfile(data);
+      const updatedUser = response.data.data;
+      setProfileData(updatedUser);
+      setUser(updatedUser); // Update AuthContext
+      Alert.alert('Success', 'Profile updated successfully!');
+    } catch (error) {
+      console.error('Update failed:', error);
+      Alert.alert('Error', 'Failed to update profile.');
+      throw error;
+    }
+  };
+
+  const handleEditPhoto = () => {
+    Alert.alert('Change Photo', 'Upload from gallery or take a new photo.', [
+      { text: 'Gallery', onPress: () => console.log('Pick image') },
+      { text: 'Camera', onPress: () => console.log('Take photo') },
+      { text: 'Cancel', style: 'cancel' }
+    ]);
+  };
+
+  const menuItems = [
+    { 
+      id: 'edit', 
+      label: 'Edit Profile', 
+      icon: 'person-outline', 
+      onPress: () => setIsEditModalVisible(true) 
+    },
+    { 
+      id: 'help', 
+      label: 'Help & Support', 
+      icon: 'help-circle-outline', 
+      onPress: () => Alert.alert('Support', 'Contacting support...') 
+    },
+    { 
+      id: 'about', 
+      label: 'About AuraPixels', 
+      icon: 'information-circle-outline', 
+      onPress: () => Alert.alert('About', 'AuraPixels v1.0.0\nAI-powered wallpaper platform.') 
+    },
+    { 
+      id: 'privacy', 
+      label: 'Privacy Policy', 
+      icon: 'shield-checkmark-outline', 
+      onPress: () => console.log('Privacy') 
+    },
+    { 
+      id: 'terms', 
+      label: 'Terms & Conditions', 
+      icon: 'document-text-outline', 
+      onPress: () => console.log('Terms') 
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#38bdf8" />
+        <Text style={styles.loadingText}>Loading your profile...</Text>
       </View>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{favorites.length}</Text>
-          <Text style={styles.statLabel}>Favorites</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{history.length}</Text>
-          <Text style={styles.statLabel}>Generated</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>Downloads</Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Generation History</Text>
-    </View>
-  );
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" />
-      <FlatList
-        data={history}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.historyItem}>
-            <View style={styles.historyImageWrapper}>
-              <WallpaperCard
-                id={item.id || ""}
-                url={item.url || ""}
-                prompt={item.prompt || "Wallpaper"}
-                userName={user?.name || "User"}
-                likes={0}
-                onPress={() => navigation.navigate('WallpaperDetail', { wallpaper: item })}
-              />
-            </View>
-            <View style={styles.historyInfo}>
-              <Text style={styles.historyPrompt} numberOfLines={2}>&quot;{item.prompt}&quot;</Text>
-              <View style={styles.historyTags}>
-                {item.tags?.map(tag => (
-                  <Text key={tag} style={styles.historyTagText}>#{tag}</Text>
-                ))}
-              </View>
-              <TouchableOpacity 
-                style={styles.reGenerateBtn}
-                onPress={() => navigation.navigate('GenerateTab', { initialPrompt: item.prompt })}
-              >
-                <Text style={styles.reGenerateText}>Regenerate</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No generation history yet.</Text>
-          </View>
-        }
-        contentContainerStyle={styles.listContent}
+      
+      <ScrollView 
         showsVerticalScrollIndicator={false}
-      />
+        contentContainerStyle={styles.scrollContent}
+      >
+        <ProfileHeader 
+          user={profileData} 
+          onEditPhoto={handleEditPhoto}
+          onPhotoPress={() => setIsPreviewVisible(true)}
+        />
+
+        <ProfileStats stats={{
+          generated: profileData?.generatedCount || 0,
+          liked: profileData?.likedCount || 0,
+          favorites: profileData?.favoritesCount || 0,
+          joinedDate: profileData?.joinedDate || '2024'
+        }} />
+
+        <SettingsMenu items={menuItems} />
+
+        <LogoutButton onLogout={async () => {
+          await logout();
+        }} />
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {profileData && (
+        <EditProfileModal 
+          visible={isEditModalVisible}
+          onClose={() => setIsEditModalVisible(false)}
+          onSave={handleUpdateProfile}
+          initialData={{ name: profileData.name, email: profileData.email }}
+        />
+      )}
+
+      {/* Fullscreen Preview */}
+      <Modal visible={isPreviewVisible} transparent animationType="fade">
+        <BlurView intensity={90} tint="dark" style={styles.previewOverlay}>
+          <TouchableOpacity 
+            style={styles.closePreview} 
+            onPress={() => setIsPreviewVisible(false)}
+          >
+            <Ionicons name="close" size={32} color="#fff" />
+          </TouchableOpacity>
+          <Animated.View entering={FadeIn.duration(400)} style={styles.previewImageWrapper}>
+            <Image 
+              source={profileData?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData?.name || 'User')}&background=38bdf8&color=fff`}
+              style={styles.fullImage}
+              contentFit="contain"
+            />
+          </Animated.View>
+          <TouchableOpacity style={styles.changeBtn} onPress={handleEditPhoto}>
+            <Ionicons name="camera" size={24} color="#0f172a" />
+            <Text style={styles.changeBtnText}>Change Photo</Text>
+          </TouchableOpacity>
+        </BlurView>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#1e293b',
     paddingTop: 15,
   },
-  listContent: {
-    padding: SIZES.lg,
-    paddingBottom: 100,
+  scrollContent: {
+    padding: 24,
   },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.xl,
-  },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.primary,
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#1e293b',
     justifyContent: 'center',
     alignItems: 'center',
-    ...SHADOWS.subtle,
   },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  userInfo: {
-    flex: 1,
-    marginLeft: SIZES.md,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  logoutBtn: {
-    padding: SIZES.sm,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius,
-    padding: SIZES.lg,
-    marginBottom: SIZES.xl,
-    ...SHADOWS.subtle,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: SIZES.xs,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: COLORS.background,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: SIZES.md,
-  },
-  historyItem: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius,
-    padding: SIZES.sm,
-    marginBottom: SIZES.md,
-    ...SHADOWS.subtle,
-  },
-  historyImageWrapper: {
-    width: 80,
-  },
-  historyInfo: {
-    flex: 1,
-    marginLeft: SIZES.md,
-    justifyContent: 'center',
-  },
-  historyPrompt: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    color: COLORS.text,
-    marginBottom: SIZES.xs,
-  },
-  historyTags: {
-    flexDirection: 'row',
-    gap: SIZES.xs,
-    marginBottom: SIZES.sm,
-  },
-  historyTagText: {
-    fontSize: 12,
-    color: COLORS.secondary,
-  },
-  reGenerateBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: SIZES.md,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  reGenerateText: {
-    fontSize: 12,
-    color: COLORS.primary,
+  loadingText: {
+    marginTop: 16,
+    color: '#94a3b8',
+    fontSize: 16,
     fontWeight: '600',
   },
-  emptyContainer: {
-    padding: SIZES.xl,
+  previewOverlay: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  emptyText: {
-    color: COLORS.textSecondary,
+  closePreview: {
+    position: 'absolute',
+    top: 60,
+    right: 30,
+    zIndex: 10,
+  },
+  previewImageWrapper: {
+    width: '100%',
+    height: '60%',
+    borderRadius: 40,
+    overflow: 'hidden',
+  },
+  fullImage: {
+    width: '100%',
+    height: '100%',
+  },
+  changeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#38bdf8',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 20,
+    marginTop: 40,
+    gap: 10,
+  },
+  changeBtnText: {
+    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

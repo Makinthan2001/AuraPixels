@@ -7,6 +7,7 @@ import aiRoutes from './routes/ai.routes';
 import favoriteRoutes from './routes/favorite.routes';
 import historyRoutes from './routes/history.routes';
 import feedRoutes from './routes/feed.routes';
+import userRoutes from './routes/user.routes';
 import { errorHandler } from './middlewares/error.middleware';
 
 dotenv.config();
@@ -64,6 +65,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/feed', feedRoutes);
+app.use('/api/user', userRoutes);
 
 // Root route
 app.get('/', (req, res) => {
