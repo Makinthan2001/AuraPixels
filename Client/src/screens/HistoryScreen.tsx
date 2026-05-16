@@ -9,7 +9,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Alert,
   Modal,
@@ -17,6 +16,7 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as MediaLibrary from "expo-media-library";
@@ -201,13 +201,14 @@ export const HistoryScreen = () => {
   }, [debouncedSearchQuery, selectedCategory, historyItems]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="light-content" />
-      <TopBar title="History" />
 
       <View style={styles.content}>
         {/* Search */}
-        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+        <View style={styles.searchWrapper}>
+          <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+        </View>
 
         {/* Filters */}
         <FilterChips
@@ -345,10 +346,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.background,
+    paddingTop: 15,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 0, // Grid handles its own padding
+  },
+  searchWrapper: {
+    paddingHorizontal: 20,
+    marginTop: 10,
   },
   // Modal Styles
   modalContainer: {

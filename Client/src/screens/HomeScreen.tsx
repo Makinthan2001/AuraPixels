@@ -17,6 +17,7 @@ import {
   Modal,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -256,9 +257,8 @@ export const HomeScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="light-content" />
-      <TopBar title="Discover" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -383,7 +383,7 @@ export const HomeScreen = () => {
           )}
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -391,6 +391,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.background,
+    paddingTop: 15,
   },
   scrollContent: {
     paddingBottom: 20,

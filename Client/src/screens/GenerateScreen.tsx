@@ -3,14 +3,15 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TextInput,
   TouchableOpacity,
   Alert,
   Platform,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as FileSystem from "expo-file-system/legacy";
 import * as MediaLibrary from "expo-media-library";
@@ -250,10 +251,8 @@ export const GenerateScreen = ({ route, navigation }: any) => {
   };
 
   return (
-    <View style={styles.safeArea}>
-      <SafeAreaView style={{ flex: 1 }}>
-        {/* Top Header */}
-        <TopBar title="Lumina AI" />
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <StatusBar barStyle="light-content" />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -410,7 +409,6 @@ export const GenerateScreen = ({ route, navigation }: any) => {
 
           <View style={{ height: 200 }} />
         </ScrollView>
-      </SafeAreaView>
 
       {/* Floating Prompt Bar */}
       <BlurView intensity={20} tint="dark" style={styles.promptBarContainer}>
@@ -444,7 +442,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
           </TouchableOpacity>
         </View>
       </BlurView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -452,6 +450,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: LUMINA_COLORS.background,
+    paddingTop: 15,
   },
   header: {
     height: 60,

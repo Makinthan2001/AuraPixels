@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { FavoritesContext } from '../context/FavoritesContext';
@@ -47,7 +48,8 @@ export const ProfileScreen = ({ navigation }: any) => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <StatusBar barStyle="light-content" />
       <FlatList
         data={history}
         keyExtractor={(item) => item.id}
@@ -55,8 +57,11 @@ export const ProfileScreen = ({ navigation }: any) => {
           <View style={styles.historyItem}>
             <View style={styles.historyImageWrapper}>
               <WallpaperCard
-                url={item.url}
-                height={100}
+                id={item.id || ""}
+                url={item.url || ""}
+                prompt={item.prompt || "Wallpaper"}
+                userName={user?.name || "User"}
+                likes={0}
                 onPress={() => navigation.navigate('WallpaperDetail', { wallpaper: item })}
               />
             </View>
@@ -93,6 +98,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingTop: 15,
   },
   listContent: {
     padding: SIZES.lg,

@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritesContext } from '../context/FavoritesContext';
 import { WallpaperCard } from '../components/WallpaperCard';
@@ -20,8 +21,8 @@ export const FavoritesScreen = ({ navigation }: any) => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <TopBar title="Favorites" />
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <StatusBar barStyle="light-content" />
       
       <View style={styles.header}>
         <Text style={styles.subtitle}>{favorites.length} saved wallpapers</Text>
@@ -37,9 +38,11 @@ export const FavoritesScreen = ({ navigation }: any) => {
           renderItem={({ item, index }) => (
             <View style={[styles.gridItem, index % 2 === 0 ? styles.gridItemLeft : styles.gridItemRight]}>
               <WallpaperCard
+                id={item.id}
                 url={item.url}
-                title={item.title}
-                height={200}
+                prompt={item.title || item.prompt || "Wallpaper"}
+                userName="User"
+                likes={0}
                 onPress={() => navigation.navigate('WallpaperDetail', { wallpaper: item })}
               />
             </View>
@@ -56,6 +59,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingTop: 15,
   },
   header: {
     padding: SIZES.lg,

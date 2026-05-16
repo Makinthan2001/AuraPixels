@@ -35,22 +35,24 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.card,
-    borderRadius: 16,
-    paddingHorizontal: 15,
-    height: 54,
+    backgroundColor: 'rgba(51, 65, 85, 0.5)', // More translucent dark blue
+    borderRadius: 28, // Pill shape
+    paddingHorizontal: 20,
+    height: 56,
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   icon: {
-    marginRight: 10,
+    marginRight: 12,
+    opacity: 0.7,
   },
   input: {
     flex: 1,
     color: THEME.text,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
+    letterSpacing: 0.3,
     ...Platform.select({
       web: {
         outlineStyle: 'none',
