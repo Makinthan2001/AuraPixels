@@ -188,7 +188,7 @@ export class FeedService {
    */
   static async getTrending(userId?: number) {
     const wallpapers = await prisma.wallpaper.findMany({
-      take: 100,
+      take: 20,
       orderBy: [
         { likesCount: 'desc' },
         { createdAt: 'desc' },
@@ -201,45 +201,16 @@ export class FeedService {
             profileImage: true,
           },
         },
-        likes: {
-          select: {
-            id: true,
-            createdAt: true,
-            userId: true,
-          },
-        },
+        likes: userId
+          ? {
+              where: { userId },
+              select: { id: true },
+            }
+          : false,
       },
     });
 
-    return wallpapers
-      .map((wallpaper) => {
-        const latestEngagementAt = wallpaper.likes.length
-          ? wallpaper.likes.reduce((latest, like) => (like.createdAt > latest ? like.createdAt : latest), wallpaper.createdAt)
-          : wallpaper.createdAt;
-
-        const isLiked = userId ? wallpaper.likes.some((like) => like.userId === userId) : false;
-
-        return {
-          ...FeedService.mapWallpaperRow(wallpaper, isLiked),
-          latestEngagementAt,
-        };
-      })
-      .sort((a, b) => {
-        if (b.likesCount !== a.likesCount) {
-          return b.likesCount - a.likesCount;
-        }
-
-        const latestA = a.latestEngagementAt instanceof Date ? a.latestEngagementAt.getTime() : new Date(a.latestEngagementAt).getTime();
-        const latestB = b.latestEngagementAt instanceof Date ? b.latestEngagementAt.getTime() : new Date(b.latestEngagementAt).getTime();
-
-        if (latestB !== latestA) {
-          return latestB - latestA;
-        }
-
-        return b.createdAt.getTime() - a.createdAt.getTime();
-      })
-      .slice(0, 10)
-      .map(({ latestEngagementAt, ...wallpaper }) => wallpaper);
+    return wallpapers.map((wallpaper) => FeedService.mapWallpaperRow(wallpaper));
   }
 
   /**

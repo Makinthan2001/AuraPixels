@@ -25,6 +25,7 @@ import { TopBar } from "../components/TopBar";
 import { SearchBar } from "../components/SearchBar";
 import { FilterChips } from "../components/FilterChips";
 import { FeedGrid } from "../components/FeedGrid";
+import { TrendingCarousel } from "../components/TrendingCarousel";
 import { WallpaperImage } from "../components/WallpaperImage";
 import { api } from "../services/api";
 import { MOCK_WALLPAPERS } from "../utils/mockData";
@@ -274,14 +275,8 @@ export const HomeScreen = () => {
           <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
         </View>
 
-        <View style={[styles.sectionHeader, styles.headerWithViewAll]}>
-          <Text style={styles.sectionTitle}>Trending Wallpapers</Text>
-          <TouchableOpacity>
-            <Text style={styles.viewAllLink}>View All</Text>
-          </TouchableOpacity>
-        </View>
-        <FeedGrid
-          data={trendingWallpapers.slice(0, 4)}
+        <TrendingCarousel
+          data={trendingWallpapers}
           loading={isTrendingLoading}
           onItemPress={openPreview}
           onLike={handleLike}

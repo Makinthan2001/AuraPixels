@@ -216,7 +216,11 @@ export const HistoryScreen = () => {
         />
 
         {/* Grid */}
-        <Animated.View key={filterKey} entering={FadeIn.duration(180)}>
+        <Animated.View 
+          key={filterKey} 
+          entering={FadeIn.duration(180)}
+          style={{ flex: 1 }}
+        >
           <HistoryGrid
             data={filteredItems}
             loading={loading}
