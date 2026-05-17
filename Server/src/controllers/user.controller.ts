@@ -76,13 +76,12 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    // In a real app, you'd upload to Cloudinary/S3 and get a URL
-    // For now, we'll just mock it or use a local path
-    const imageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userId)}&background=38bdf8&color=fff`;
+    // Convert the image buffer to a Base64 string
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { profileImage: imageUrl },
+      data: { profileImage: base64Image },
     });
 
     res.status(200).json({

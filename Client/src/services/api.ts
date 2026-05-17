@@ -96,7 +96,7 @@ export const api = {
     apiClient.post('/ai/generate', { prompt, style, size }, { timeout: 120000 }),
 
   // Favorites
-  getFavorites: (userId: number) => apiClient.get(`/favorites/${userId}`),
+  getFavorites: (params?: { page?: number; limit?: number }) => apiClient.get('/favorites', { params }),
   addFavorite: (wallpaperId: number) => apiClient.post('/favorites', { wallpaper_id: wallpaperId }),
   removeFavorite: (favoriteId: number) => apiClient.delete(`/favorites/${favoriteId}`),
 

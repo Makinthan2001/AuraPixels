@@ -73,35 +73,45 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
 
 export const getFavorites = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = Number(req.params.userId);
-
-    // Verify requesting user is getting their own favorites
-    if (req.user?.id !== userId) {
-      res.status(403);
-      throw new Error('Not authorized to get these favorites');
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401);
+      throw new Error('Not authorized');
     }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
     const favorites = await prisma.favorite.findMany({
       where: { userId },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
       include: {
         wallpaper: {
-          select: {
-            id: true,
-            imageUrl: true,
-            tags: true,
+          include: {
+            user: { select: { name: true } },
+            likes: { where: { userId }, select: { id: true } },
           },
         },
       },
     });
 
     const formattedFavorites = favorites.map(fav => ({
-      favorite_id: fav.id,
-      wallpaper_id: fav.wallpaper.id,
-      image_url: fav.wallpaper.imageUrl,
-      tags: fav.wallpaper.tags,
+      id: fav.wallpaper.id,
+      prompt: fav.wallpaper.prompt,
+      imageUrl: fav.wallpaper.imageUrl,
+      style: fav.wallpaper.style,
+      resolution: fav.wallpaper.resolution,
+      likesCount: fav.wallpaper.likesCount,
+      createdAt: fav.wallpaper.createdAt,
+      userName: fav.wallpaper.user?.name || 'AuraPixels',
+      isLiked: fav.wallpaper.likes.length > 0,
+      isFavorite: true,
     }));
 
-    res.json(formattedFavorites);
+    res.json({ data: formattedFavorites });
   } catch (error: any) {
     res.status(res.statusCode === 200 ? 500 : res.statusCode).json({ message: error.message });
   }

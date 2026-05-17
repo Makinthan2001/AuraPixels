@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -75,12 +77,90 @@ export const ProfileScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleEditPhoto = () => {
+  const handleEditPhoto = async () => {
+    if (Platform.OS === 'web') {
+      await pickImage();
+      return;
+    }
+
     Alert.alert('Change Photo', 'Upload from gallery or take a new photo.', [
-      { text: 'Gallery', onPress: () => console.log('Pick image') },
-      { text: 'Camera', onPress: () => console.log('Take photo') },
+      { text: 'Gallery', onPress: pickImage },
+      { text: 'Camera', onPress: takePhoto },
       { text: 'Cancel', style: 'cancel' }
     ]);
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0]);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera permission is required.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0]);
+    }
+  };
+
+  const uploadImage = async (asset: ImagePicker.ImagePickerAsset) => {
+    try {
+      setIsLoading(true);
+      const formData = new FormData();
+      
+      if (Platform.OS === 'web') {
+        const res = await fetch(asset.uri);
+        const blob = await res.blob();
+        formData.append('photo', blob, 'profile.jpg');
+      } else {
+        formData.append('photo', {
+          uri: asset.uri,
+          type: 'image/jpeg',
+          name: 'profile.jpg'
+        } as any);
+      }
+
+      const response = await api.uploadPhoto(formData);
+      const updatedProfileImage = response.data.data.profileImage;
+      
+      setProfileData({ ...profileData, profileImage: updatedProfileImage });
+      if (user) {
+        setUser({ ...user, profileImage: updatedProfileImage } as any);
+      }
+      if (Platform.OS !== 'web') {
+        Alert.alert('Success', 'Profile photo updated!');
+      } else {
+        window.alert('Profile photo updated!');
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Error', 'Failed to upload photo.');
+      } else {
+        window.alert('Failed to upload photo.');
+      }
+    } finally {
+      setIsLoading(false);
+      setIsPreviewVisible(false);
+    }
   };
 
   const menuItems = [

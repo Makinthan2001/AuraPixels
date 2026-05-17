@@ -6,6 +6,7 @@ type User = {
   id: number;
   name: string;
   email: string;
+  profileImage?: string;
 } | null;
 
 interface AuthContextData {
@@ -16,6 +17,7 @@ interface AuthContextData {
   verifyOTP: (name: string, email: string, pass: string, otp: string) => Promise<void>;
   googleSignIn: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<User>>;
   isLoading: boolean;
 }
 
@@ -117,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, registerInitiate, verifyOTP, googleSignIn, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, registerInitiate, verifyOTP, googleSignIn, logout, setUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

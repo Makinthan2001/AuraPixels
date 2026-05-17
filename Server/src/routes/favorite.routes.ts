@@ -5,7 +5,7 @@ import { protect } from '../middlewares/auth.middleware';
 const router = express.Router();
 
 router.post('/', protect, addFavorite);
-router.get('/:userId', protect, getFavorites);
+router.get('/', protect, getFavorites);
 router.delete('/:id', protect, removeFavorite);
 
 export default router;
