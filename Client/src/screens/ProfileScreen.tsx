@@ -23,6 +23,7 @@ import { FavoritesContext } from '../context/FavoritesContext';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileStats } from '../components/ProfileStats';
 import { SettingsMenu } from '../components/SettingsMenu';
+import { TopBar } from '../components/TopBar';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { LogoutButton } from '../components/LogoutButton';
 import { api } from '../services/api';
@@ -208,6 +209,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" />
+      <TopBar />
       
       <ScrollView 
         showsVerticalScrollIndicator={false}

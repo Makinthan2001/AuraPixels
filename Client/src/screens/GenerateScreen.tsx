@@ -253,6 +253,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="light-content" />
+      <TopBar />
 
         <ScrollView
           showsVerticalScrollIndicator={false}

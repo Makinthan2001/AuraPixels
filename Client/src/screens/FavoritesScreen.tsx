@@ -21,6 +21,9 @@ import * as MediaLibrary from 'expo-media-library';
 import { api } from '../services/api';
 import { FavoritesContext } from '../context/FavoritesContext';
 import { FeedGrid } from '../components/FeedGrid';
+import { SearchBar } from '../components/SearchBar';
+import { FilterChips } from '../components/FilterChips';
+import { TopBar } from '../components/TopBar';
 import { WallpaperImage } from '../components/WallpaperImage';
 import { getAspectRatioFromResolution } from '../utils/image';
 import { COLORS, SIZES } from '../utils/constants';
@@ -36,10 +39,15 @@ const THEME = {
 
 export const FavoritesScreen = () => {
   const [favoritesList, setFavoritesList] = useState<any[]>([]);
+  const [filteredFavorites, setFilteredFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
@@ -72,6 +80,36 @@ export const FavoritesScreen = () => {
   useEffect(() => {
     fetchFavorites(1);
   }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 220);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    let result = favoritesList;
+
+    if (debouncedSearchQuery) {
+      const lowerQuery = debouncedSearchQuery.toLowerCase();
+      result = result.filter(item => 
+        (item.prompt && item.prompt.toLowerCase().includes(lowerQuery)) ||
+        (item.style && item.style.toLowerCase().includes(lowerQuery)) ||
+        (item.userName && item.userName.toLowerCase().includes(lowerQuery))
+      );
+    }
+
+    if (selectedCategory !== "All") {
+      result = result.filter(
+        (item) =>
+          item.style &&
+          item.style.toLowerCase() === selectedCategory.toLowerCase(),
+      );
+    }
+
+    setFilteredFavorites(result);
+  }, [debouncedSearchQuery, selectedCategory, favoritesList]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -141,11 +179,16 @@ export const FavoritesScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="light-content" />
-      
-      <View style={styles.header}>
-        <Text style={styles.title}>Favorites</Text>
-        <Text style={styles.subtitle}>{favoritesList.length} saved wallpapers</Text>
+      <TopBar />
+
+      <View style={{ paddingHorizontal: 20, marginBottom: 15, marginTop: 10 }}>
+        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
       </View>
+
+      <FilterChips
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+      />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -163,7 +206,7 @@ export const FavoritesScreen = () => {
         scrollEventThrottle={400}
       >
         <FeedGrid 
-          data={favoritesList} 
+          data={filteredFavorites} 
           loading={loading && favoritesList.length === 0} 
           onItemPress={(item) => {
             setSelectedItem(item);

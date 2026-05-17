@@ -203,6 +203,7 @@ export const HistoryScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="light-content" />
+      <TopBar />
 
       <View style={styles.content}>
         {/* Search */}

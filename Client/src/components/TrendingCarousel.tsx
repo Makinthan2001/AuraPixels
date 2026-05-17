@@ -243,9 +243,6 @@ export const TrendingCarousel = ({ data, loading, onItemPress, onLike }: Trendin
         <View style={styles.titleWrapper}>
           <Text style={styles.title}>Trending Now</Text>
         </View>
-        <TouchableOpacity>
-          <Text style={styles.viewAll}>View All</Text>
-        </TouchableOpacity>
       </View>
 
       <Animated.FlatList

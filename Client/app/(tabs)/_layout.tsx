@@ -70,7 +70,7 @@ export default function TabLayout() {
           } else if (route.name === 'history') {
             iconName = focused ? 'briefcase' : 'briefcase-outline';
           } else if (route.name === 'favorites') {
-            iconName = focused ? 'heart' : 'heart-outline';
+            iconName = focused ? 'bookmark' : 'bookmark-outline';
           }
 
           if (route.name === 'generate') {
@@ -86,10 +86,10 @@ export default function TabLayout() {
       })}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="profile" />
+      <Tabs.Screen name="favorites" />
       <Tabs.Screen name="generate" />
       <Tabs.Screen name="history" />
-      <Tabs.Screen name="favorites" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }

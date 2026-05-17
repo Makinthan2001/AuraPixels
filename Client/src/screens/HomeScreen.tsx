@@ -333,6 +333,7 @@ export const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="light-content" />
+      <TopBar />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
