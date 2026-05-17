@@ -67,6 +67,7 @@ model Wallpaper {
   @@index([style, createdAt])
   @@index([createdAt])
   @@index([likesCount])
+  @@index([likesCount(sort: Desc), createdAt(sort: Desc)])
   @@index([userId, createdAt])
 }
 

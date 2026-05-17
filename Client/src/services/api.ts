@@ -97,7 +97,7 @@ export const api = {
 
   // Favorites
   getFavorites: (userId: number) => apiClient.get(`/favorites/${userId}`),
-  addFavorite: (wallpaperId: number) => apiClient.post('/favorites', { wallpaperId }),
+  addFavorite: (wallpaperId: number) => apiClient.post('/favorites', { wallpaper_id: wallpaperId }),
   removeFavorite: (favoriteId: number) => apiClient.delete(`/favorites/${favoriteId}`),
 
   // History

@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useRef,
+  useContext,
 } from "react";
 import {
   View,
@@ -16,12 +17,17 @@ import {
   RefreshControl,
   Modal,
   Platform,
+  Share,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import Animated, { FadeIn } from "react-native-reanimated";
+import * as FileSystem from "expo-file-system/legacy";
+import * as MediaLibrary from "expo-media-library";
 
+import { FavoritesContext } from "../context/FavoritesContext";
 import { TopBar } from "../components/TopBar";
 import { SearchBar } from "../components/SearchBar";
 import { FilterChips } from "../components/FilterChips";
@@ -93,6 +99,9 @@ export const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const { addFavorite: addFavoriteToContext, removeFavorite: removeFavoriteFromContext, isFavorite } = useContext(FavoritesContext);
 
   const feedCacheRef = useRef<Record<string, any[]>>({});
   const trendingCacheRef = useRef<any[] | null>(null);
@@ -256,6 +265,71 @@ export const HomeScreen = () => {
     setIsPreviewVisible(true);
   };
 
+  const handleDownload = async () => {
+    if (!selectedItem?.imageUrl) return;
+    try {
+      setIsDownloading(true);
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant permission to save images.');
+        return;
+      }
+      const fileUri = `${FileSystem.documentDirectory}${selectedItem.id}.jpg`;
+      const { uri } = await FileSystem.downloadAsync(selectedItem.imageUrl, fileUri);
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert('Success', 'Wallpaper saved to your gallery!');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to download wallpaper.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleFavorite = async () => {
+    if (!selectedItem) return;
+
+    const wallpaperObj = {
+      id: String(selectedItem.id),
+      url: selectedItem.imageUrl,
+      prompt: selectedItem.prompt,
+    };
+    
+    const currentlyFavorited = isFavorite(String(selectedItem.id));
+    
+    // Optimistic UI update for context
+    if (currentlyFavorited) {
+      removeFavoriteFromContext(String(selectedItem.id));
+    } else {
+      addFavoriteToContext(wallpaperObj);
+    }
+
+    try {
+      const parsedId = parseInt(selectedItem.id, 10);
+      
+      if (!Number.isNaN(parsedId)) {
+        const response = await api.addFavorite(parsedId);
+        if (response.data?.message === 'Favorite removed') {
+          Alert.alert('Removed', 'Removed from favorites.');
+        } else {
+          Alert.alert('Success', 'Added to favorites!');
+        }
+      } else {
+        // Handle mock items gracefully without pinging DB
+        Alert.alert(currentlyFavorited ? 'Removed' : 'Success', currentlyFavorited ? 'Removed from local favorites.' : 'Added to local favorites!');
+      }
+    } catch (error: any) {
+      // Revert optimistic update on failure
+      if (currentlyFavorited) {
+        addFavoriteToContext(wallpaperObj);
+      } else {
+        removeFavoriteFromContext(String(selectedItem.id));
+      }
+      const msg = error.response?.data?.message || 'Failed to update favorites. Please check if you are logged in and the wallpaper exists.';
+      Alert.alert('Error', msg);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="light-content" />
@@ -364,17 +438,24 @@ export const HomeScreen = () => {
                 </View>
 
                 <View style={styles.previewActions}>
-                  <TouchableOpacity style={styles.primaryAction}>
+                  <TouchableOpacity 
+                    style={[styles.primaryAction, isDownloading && { opacity: 0.7 }]} 
+                    onPress={handleDownload}
+                    disabled={isDownloading}
+                  >
                     <Ionicons name="download" size={24} color="#0f172a" />
-                    <Text style={styles.primaryActionText}>Download</Text>
+                    <Text style={styles.primaryActionText}>
+                      {isDownloading ? "Downloading..." : "Download"}
+                    </Text>
                   </TouchableOpacity>
 
                   <View style={styles.secondaryActions}>
-                    <TouchableOpacity style={styles.iconAction}>
-                      <Ionicons name="share-social" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconAction}>
-                      <Ionicons name="bookmark" size={24} color="#fff" />
+                    <TouchableOpacity style={styles.iconAction} onPress={handleFavorite}>
+                      <Ionicons 
+                        name={selectedItem && isFavorite(String(selectedItem.id)) ? "bookmark" : "bookmark-outline"} 
+                        size={24} 
+                        color={selectedItem && isFavorite(String(selectedItem.id)) ? THEME.accent : "#fff"} 
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>

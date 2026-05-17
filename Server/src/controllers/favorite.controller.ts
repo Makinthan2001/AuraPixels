@@ -4,12 +4,21 @@ import { prisma } from '../lib/prisma';
 
 export const addFavorite = async (req: AuthRequest, res: Response) => {
   try {
-    const { wallpaper_id } = req.body;
+    console.log("ADD FAVORITE CALLED with body:", req.body);
+    const wallpaperIdToUse = req.body.wallpaper_id || req.body.wallpaperId;
     const userId = req.user?.id;
 
-    if (!wallpaper_id) {
+    if (!wallpaperIdToUse) {
       res.status(400);
       throw new Error('Wallpaper ID is required');
+    }
+
+    // Convert to number just in case
+    const numericWallpaperId = typeof wallpaperIdToUse === 'string' ? parseInt(wallpaperIdToUse, 10) : wallpaperIdToUse;
+
+    if (Number.isNaN(numericWallpaperId)) {
+      res.status(400);
+      throw new Error('Invalid Wallpaper ID format');
     }
 
     if (!userId) {
@@ -19,7 +28,7 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
 
     // Check if wallpaper exists
     const wallpaperCheck = await prisma.wallpaper.findUnique({
-      where: { id: wallpaper_id },
+      where: { id: numericWallpaperId },
       select: { id: true },
     });
     
@@ -33,20 +42,22 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
       where: {
         userId_wallpaperId: {
           userId,
-          wallpaperId: wallpaper_id,
+          wallpaperId: numericWallpaperId,
         },
       },
     });
 
     if (favCheck) {
-      res.status(400);
-      throw new Error('Already in favorites');
+      await prisma.favorite.delete({
+        where: { id: favCheck.id },
+      });
+      return res.status(200).json({ message: 'Favorite removed', isFavorited: false });
     }
 
     const favorite = await prisma.favorite.create({
       data: {
         userId,
-        wallpaperId: wallpaper_id,
+        wallpaperId: numericWallpaperId,
       },
       select: {
         id: true,

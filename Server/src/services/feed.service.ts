@@ -156,9 +156,6 @@ export class FeedService {
               profileImage: true,
             },
           },
-          _count: {
-            select: { likes: true },
-          },
           likes: options.userId
             ? {
                 where: { userId: options.userId },
