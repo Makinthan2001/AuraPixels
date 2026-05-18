@@ -89,7 +89,9 @@ export class FeedController {
         data: result,
       });
     } catch (error: any) {
-      res.status(500).json({
+      const status = error.status || error.statusCode || 500;
+
+      res.status(status).json({
         success: false,
         message: error.message || 'Failed to toggle like',
       });

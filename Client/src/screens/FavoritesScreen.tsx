@@ -1,32 +1,35 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  RefreshControl, 
-  StatusBar, 
-  Modal, 
-  TouchableOpacity, 
-  Alert, 
+import React, { useState, useEffect, useCallback, useContext } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  RefreshControl,
+  StatusBar,
+  Modal,
+  TouchableOpacity,
+  Alert,
   Platform,
-  ScrollView
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
+  ScrollView,
+  Dimensions,
+} from "react-native";
 
-import { api } from '../services/api';
-import { FavoritesContext } from '../context/FavoritesContext';
-import { FeedGrid } from '../components/FeedGrid';
-import { SearchBar } from '../components/SearchBar';
-import { FilterChips } from '../components/FilterChips';
-import { TopBar } from '../components/TopBar';
-import { WallpaperImage } from '../components/WallpaperImage';
-import { getAspectRatioFromResolution } from '../utils/image';
-import { COLORS, SIZES } from '../utils/constants';
+const { height } = Dimensions.get("window");
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import Animated, { FadeIn } from "react-native-reanimated";
+import * as FileSystem from "expo-file-system/legacy";
+import * as MediaLibrary from "expo-media-library";
+
+import { api } from "../services/api";
+import { FavoritesContext } from "../context/FavoritesContext";
+import { FeedGrid } from "../components/FeedGrid";
+import { SearchBar } from "../components/SearchBar";
+import { FilterChips } from "../components/FilterChips";
+import { TopBar } from "../components/TopBar";
+import { WallpaperImage } from "../components/WallpaperImage";
+import { getAspectRatioFromResolution } from "../utils/image";
+import { COLORS, SIZES } from "../utils/constants";
 
 const THEME = {
   background: "#1e293b",
@@ -44,33 +47,38 @@ export const FavoritesScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  
+
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const { removeFavorite: removeFavoriteFromContext, addFavorite: addFavoriteToContext, isFavorite } = useContext(FavoritesContext);
+  const {
+    removeFavorite: removeFavoriteFromContext,
+    addFavorite: addFavoriteToContext,
+    isFavorite,
+    toggleFavorite,
+  } = useContext(FavoritesContext);
 
   const fetchFavorites = async (pageNum = 1, shouldRefresh = false) => {
     try {
       if (pageNum === 1) setLoading(true);
       const response = await api.getFavorites({ page: pageNum, limit: 10 });
       const newItems = response.data?.data || [];
-      
+
       if (shouldRefresh || pageNum === 1) {
         setFavoritesList(newItems);
       } else {
-        setFavoritesList(prev => [...prev, ...newItems]);
+        setFavoritesList((prev) => [...prev, ...newItems]);
       }
-      
+
       setHasMore(newItems.length === 10);
       setPage(pageNum);
     } catch (error) {
-      console.error('Failed to fetch favorites', error);
+      console.error("Failed to fetch favorites", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -93,10 +101,11 @@ export const FavoritesScreen = () => {
 
     if (debouncedSearchQuery) {
       const lowerQuery = debouncedSearchQuery.toLowerCase();
-      result = result.filter(item => 
-        (item.prompt && item.prompt.toLowerCase().includes(lowerQuery)) ||
-        (item.style && item.style.toLowerCase().includes(lowerQuery)) ||
-        (item.userName && item.userName.toLowerCase().includes(lowerQuery))
+      result = result.filter(
+        (item) =>
+          (item.prompt && item.prompt.toLowerCase().includes(lowerQuery)) ||
+          (item.style && item.style.toLowerCase().includes(lowerQuery)) ||
+          (item.userName && item.userName.toLowerCase().includes(lowerQuery)),
       );
     }
 
@@ -122,35 +131,37 @@ export const FavoritesScreen = () => {
     }
   };
 
-  const handleFavoriteToggle = async () => {
-    if (!selectedItem) return;
-    
-    // Using Context to track optimistic UI
-    const currentlyFavorited = isFavorite(String(selectedItem.id)) || favoritesList.some(f => f.id === selectedItem.id);
-    
+  const handleFavoriteToggle = async (item: any) => {
+    const targetItem = item || selectedItem;
+
+    if (!targetItem) return;
+
     const wallpaperObj = {
-      id: String(selectedItem.id),
-      url: selectedItem.imageUrl,
-      prompt: selectedItem.prompt,
+      id: String(targetItem.id),
+      url: targetItem.imageUrl,
+      prompt: targetItem.prompt,
+      wallpaperId: Number.parseInt(targetItem.id, 10),
     };
-    
-    // Optimistic UI updates
-    if (currentlyFavorited) {
-      removeFavoriteFromContext(String(selectedItem.id));
-      setFavoritesList(prev => prev.filter(f => f.id !== selectedItem.id));
-      setIsPreviewVisible(false); // Close modal when unfavoriting from favorites screen
-    } else {
-      addFavoriteToContext(wallpaperObj);
-      setFavoritesList(prev => [selectedItem, ...prev]);
-    }
 
     try {
-      const parsedId = parseInt(selectedItem.id, 10);
-      if (!Number.isNaN(parsedId)) {
-        await api.addFavorite(parsedId);
+      const result = await toggleFavorite(wallpaperObj);
+
+      if (result.favorited) {
+        addFavoriteToContext(wallpaperObj);
+        setFavoritesList((prev) =>
+          prev.some((f) => f.id === targetItem.id)
+            ? prev
+            : [targetItem, ...prev],
+        );
+      } else {
+        removeFavoriteFromContext(String(targetItem.id));
+        setFavoritesList((prev) => prev.filter((f) => f.id !== targetItem.id));
+        if (!item) {
+          setIsPreviewVisible(false);
+        }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update favorite status');
+      Alert.alert("Error", "Failed to update favorite status");
       fetchFavorites(1, true); // Revert on fail
     }
   };
@@ -160,17 +171,23 @@ export const FavoritesScreen = () => {
     try {
       setIsDownloading(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant permission to save images.');
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant permission to save images.",
+        );
         return;
       }
       const fileUri = `${FileSystem.documentDirectory}${selectedItem.id}.jpg`;
-      const { uri } = await FileSystem.downloadAsync(selectedItem.imageUrl, fileUri);
+      const { uri } = await FileSystem.downloadAsync(
+        selectedItem.imageUrl,
+        fileUri,
+      );
       await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert('Success', 'Wallpaper saved to your gallery!');
+      Alert.alert("Success", "Wallpaper saved to your gallery!");
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to download wallpaper.');
+      Alert.alert("Error", "Failed to download wallpaper.");
     } finally {
       setIsDownloading(false);
     }
@@ -195,24 +212,33 @@ export const FavoritesScreen = () => {
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={THEME.accent} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={THEME.accent}
+          />
         }
         onScroll={({ nativeEvent }) => {
-          const isCloseToBottom = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 400;
+          const isCloseToBottom =
+            nativeEvent.layoutMeasurement.height +
+              nativeEvent.contentOffset.y >=
+            nativeEvent.contentSize.height - 400;
           if (isCloseToBottom) {
             handleLoadMore();
           }
         }}
         scrollEventThrottle={400}
       >
-        <FeedGrid 
-          data={filteredFavorites} 
-          loading={loading && favoritesList.length === 0} 
+        <FeedGrid
+          data={filteredFavorites}
+          loading={loading && favoritesList.length === 0}
           onItemPress={(item) => {
             setSelectedItem(item);
             setIsPreviewVisible(true);
           }}
-          onLike={() => {}} // Not rendering a like button natively in the grid if not requested, but WallpaperCard expects it
+          onLike={handleFavoriteToggle}
+          actionIconName="bookmark"
+          actionIconColor={THEME.accent}
         />
       </ScrollView>
 
@@ -224,10 +250,17 @@ export const FavoritesScreen = () => {
         onRequestClose={() => setIsPreviewVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView
+            intensity={80}
+            tint="dark"
+            style={StyleSheet.absoluteFill}
+          />
 
           {selectedItem && (
-            <Animated.View entering={FadeIn.duration(300)} style={styles.previewContent}>
+            <Animated.View
+              entering={FadeIn.duration(300)}
+              style={styles.previewContent}
+            >
               <TouchableOpacity
                 style={styles.closeBtn}
                 onPress={() => setIsPreviewVisible(false)}
@@ -237,10 +270,12 @@ export const FavoritesScreen = () => {
 
               <WallpaperImage
                 uri={selectedItem.imageUrl}
-                aspectRatio={getAspectRatioFromResolution(selectedItem.resolution)}
-                contentFit="contain"
+                aspectRatio={getAspectRatioFromResolution(
+                  selectedItem.resolution,
+                )}
+                contentFit="cover"
                 borderRadius={28}
-                style={styles.fullImage}
+                style={[styles.fullImage, styles.imageShadow]}
               />
 
               <BlurView intensity={40} tint="dark" style={styles.previewInfo}>
@@ -250,25 +285,36 @@ export const FavoritesScreen = () => {
                   <View style={styles.previewUser}>
                     <View style={styles.modalAvatar}>
                       <Text style={styles.avatarText}>
-                        {(selectedItem.userName || selectedItem.user?.name || "U")[0]}
+                        {
+                          (selectedItem.userName ||
+                            selectedItem.user?.name ||
+                            "U")[0]
+                        }
                       </Text>
                     </View>
                     <Text style={styles.modalUsername}>
-                      {selectedItem.userName || selectedItem.user?.name || "AuraPixels"}
+                      {selectedItem.userName ||
+                        selectedItem.user?.name ||
+                        "AuraPixels"}
                     </Text>
                   </View>
 
                   <View style={styles.previewStats}>
                     <View style={styles.statItem}>
                       <Ionicons name="heart" size={20} color={THEME.danger} />
-                      <Text style={styles.statText}>{selectedItem.likesCount || selectedItem.likes || 0}</Text>
+                      <Text style={styles.statText}>
+                        {selectedItem.likesCount || selectedItem.likes || 0}
+                      </Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.previewActions}>
-                  <TouchableOpacity 
-                    style={[styles.primaryAction, isDownloading && { opacity: 0.7 }]} 
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryAction,
+                      isDownloading && { opacity: 0.7 },
+                    ]}
                     onPress={handleDownload}
                     disabled={isDownloading}
                   >
@@ -279,11 +325,26 @@ export const FavoritesScreen = () => {
                   </TouchableOpacity>
 
                   <View style={styles.secondaryActions}>
-                    <TouchableOpacity style={styles.iconAction} onPress={handleFavoriteToggle}>
-                      <Ionicons 
-                        name="bookmark" 
-                        size={24} 
-                        color={THEME.accent} 
+                    <TouchableOpacity
+                      style={styles.iconAction}
+                      onPress={() => handleFavoriteToggle(selectedItem)}
+                    >
+                      <Ionicons
+                        name={
+                          selectedItem &&
+                          (isFavorite(String(selectedItem.id)) ||
+                            selectedItem.favoritedByCurrentUser)
+                            ? "bookmark"
+                            : "bookmark-outline"
+                        }
+                        size={24}
+                        color={
+                          selectedItem &&
+                          (isFavorite(String(selectedItem.id)) ||
+                            selectedItem.favoritedByCurrentUser)
+                            ? THEME.accent
+                            : "#fff"
+                        }
                       />
                     </TouchableOpacity>
                   </View>
@@ -306,11 +367,11 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingBottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: "800",
     color: THEME.text,
   },
   subtitle: {
@@ -320,13 +381,13 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: SIZES.xl,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: THEME.textSecondary,
     marginTop: SIZES.md,
     marginBottom: SIZES.sm,
@@ -334,7 +395,7 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 14,
     color: THEME.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
   },
   modalContainer: {
@@ -364,6 +425,16 @@ const styles = StyleSheet.create({
   fullImage: {
     width: "100%",
     maxWidth: 500,
+    maxHeight: height * 0.68,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  imageShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 20,
   },
   previewInfo: {
     width: "100%",

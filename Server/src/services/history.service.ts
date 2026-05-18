@@ -65,8 +65,43 @@ export class HistoryService {
       prisma.history.count({ where }),
     ]);
 
+    const wallpapers = await prisma.wallpaper.findMany({
+      where: {
+        userId,
+        imageUrl: {
+          in: items.map((item) => item.imageUrl),
+        },
+      },
+      include: {
+        likes: {
+          where: { userId },
+          select: { id: true },
+        },
+        favorites: {
+          where: { userId },
+          select: { id: true },
+        },
+        _count: {
+          select: { likes: true, favorites: true },
+        },
+      },
+    });
+
+    const wallpaperByImageUrl = new Map(wallpapers.map((wallpaper) => [wallpaper.imageUrl, wallpaper]));
+
     return {
-      items,
+      items: items.map((item) => {
+        const wallpaper = wallpaperByImageUrl.get(item.imageUrl);
+
+        return {
+          ...item,
+          wallpaperId: wallpaper?.id ?? null,
+          likesCount: wallpaper?._count.likes ?? 0,
+          favoritesCount: wallpaper?._count.favorites ?? 0,
+          likedByCurrentUser: !!wallpaper?.likes.length,
+          favoritedByCurrentUser: !!wallpaper?.favorites.length,
+        };
+      }),
       pagination: {
         total,
         page,

@@ -56,6 +56,8 @@ interface FeedGridProps {
   loading: boolean;
   onItemPress: (item: FeedItem) => void;
   onLike: (item: FeedItem) => void;
+  actionIconName?: "heart" | "heart-outline" | "bookmark" | "bookmark-outline";
+  actionIconColor?: string;
 }
 
 export const FeedGrid = ({
@@ -63,6 +65,8 @@ export const FeedGrid = ({
   loading,
   onItemPress,
   onLike,
+  actionIconName,
+  actionIconColor,
 }: FeedGridProps) => {
   // Split data into two columns for masonry-like effect
   const leftColumn = data.filter((_, i) => i % 2 === 0);
@@ -107,6 +111,8 @@ export const FeedGrid = ({
                 userName={item.userName}
                 likes={item.likes}
                 isLiked={item.isLiked}
+                actionIconName={actionIconName}
+                actionIconColor={actionIconColor}
                 onPress={() => onItemPress(item)}
                 onLike={() => onLike(item)}
               />
@@ -122,6 +128,8 @@ export const FeedGrid = ({
                 userName={item.userName}
                 likes={item.likes}
                 isLiked={item.isLiked}
+                actionIconName={actionIconName}
+                actionIconColor={actionIconColor}
                 onPress={() => onItemPress(item)}
                 onLike={() => onLike(item)}
               />

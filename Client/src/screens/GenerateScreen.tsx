@@ -270,7 +270,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
               <WallpaperImage
                 uri={generatedImage.url}
                 aspectRatio={previewAspectRatio}
-                contentFit="contain"
+                contentFit="cover"
                 borderRadius={40}
                 style={styles.previewImage}
               />
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: LUMINA_COLORS.surface,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
     marginBottom: 30,
     justifyContent: "center",
     alignItems: "center",

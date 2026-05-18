@@ -29,6 +29,7 @@ interface HistoryCardProps {
   onDownload: () => void;
   onFavorite: () => void;
   onDelete: () => void;
+  isFavorited?: boolean;
 }
 
 const THEME = {
@@ -47,6 +48,7 @@ export const HistoryCard = ({
   onDownload,
   onFavorite,
   onDelete,
+  isFavorited = false,
 }: HistoryCardProps) => {
   const { width } = useWindowDimensions();
   const CARD_WIDTH = Math.max(160, (width - 60) / 2);
@@ -133,7 +135,11 @@ export const HistoryCard = ({
           activeOpacity={0.6}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="heart-outline" size={18} color="#fff" />
+          <Ionicons
+            name={isFavorited ? "bookmark" : "bookmark-outline"}
+            size={18}
+            color={isFavorited ? THEME.accent : "#fff"}
+          />
         </TouchableOpacity>
 
         {/* Delete button - top right, below favorite */}
@@ -153,13 +159,18 @@ export const HistoryCard = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
   },
   card: {
     backgroundColor: THEME.card,
     borderRadius: 24,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   image: {
     width: "100%",

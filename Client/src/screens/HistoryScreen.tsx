@@ -59,7 +59,8 @@ export const HistoryScreen = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isClearAllModalVisible, setIsClearAllModalVisible] = useState(false);
 
-  const { addFavorite } = useContext(FavoritesContext);
+  const { addFavorite, removeFavorite, isFavorite, toggleFavorite } =
+    useContext(FavoritesContext);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -145,17 +146,82 @@ export const HistoryScreen = () => {
     }
   }, []);
 
-  const handleFavorite = useCallback(
-    (item: any) => {
-      addFavorite({
-        id: item.id.toString(),
+  const handleFavoriteToggle = useCallback(
+    async (item: any) => {
+      const wallpaperId = item.wallpaperId ?? null;
+      const currentlyFavorited = Boolean(
+        item.favoritedByCurrentUser ??
+        isFavorite(String(item.wallpaperId ?? item.id)),
+      );
+      const wallpaperObj = {
+        id: String(item.wallpaperId ?? item.id),
+        wallpaperId,
         url: item.imageUrl,
         prompt: item.prompt,
         isGenerated: true,
-      });
-      Alert.alert("Success", "Added to favorites!");
+      };
+
+      const persistable = wallpaperId !== null && wallpaperId !== undefined;
+
+      try {
+        if (persistable) {
+          await toggleFavorite(wallpaperObj);
+        } else if (currentlyFavorited) {
+          removeFavorite(String(item.id));
+        } else {
+          addFavorite(wallpaperObj);
+        }
+
+        const nextFavorited = !currentlyFavorited;
+
+        setHistoryItems((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, favoritedByCurrentUser: nextFavorited }
+              : entry,
+          ),
+        );
+        setFilteredItems((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, favoritedByCurrentUser: nextFavorited }
+              : entry,
+          ),
+        );
+
+        if (selectedItem?.id === item.id) {
+          setSelectedItem((current: any) =>
+            current
+              ? { ...current, favoritedByCurrentUser: nextFavorited }
+              : current,
+          );
+        }
+      } catch (error) {
+        if (currentlyFavorited) {
+          addFavorite(wallpaperObj);
+        } else {
+          removeFavorite(String(item.id));
+        }
+
+        setHistoryItems((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, favoritedByCurrentUser: currentlyFavorited }
+              : entry,
+          ),
+        );
+        setFilteredItems((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, favoritedByCurrentUser: currentlyFavorited }
+              : entry,
+          ),
+        );
+
+        Alert.alert("Error", "Failed to update favorite status");
+      }
     },
-    [addFavorite],
+    [addFavorite, removeFavorite, isFavorite, toggleFavorite, selectedItem],
   );
 
   const openPreview = useCallback((item: any) => {
@@ -218,8 +284,8 @@ export const HistoryScreen = () => {
         />
 
         {/* Grid */}
-        <Animated.View 
-          key={filterKey} 
+        <Animated.View
+          key={filterKey}
           entering={FadeIn.duration(180)}
           style={{ flex: 1 }}
         >
@@ -228,7 +294,7 @@ export const HistoryScreen = () => {
             loading={loading}
             onItemPress={openPreview}
             onDownload={handleDownload}
-            onFavorite={handleFavorite}
+            onFavorite={handleFavoriteToggle}
             onDelete={handleDelete}
           />
         </Animated.View>
@@ -265,50 +331,77 @@ export const HistoryScreen = () => {
                 aspectRatio={getAspectRatioFromResolution(
                   selectedItem.resolution,
                 )}
-                contentFit="contain"
+                contentFit="cover"
                 borderRadius={28}
-                style={styles.fullImage}
+                style={[styles.fullImage, styles.imageShadow]}
               />
 
               <BlurView intensity={40} tint="dark" style={styles.previewInfo}>
                 <Text style={styles.previewPrompt}>{selectedItem.prompt}</Text>
 
-                <View style={styles.previewMeta}>
-                  <View style={styles.previewTag}>
-                    <Text style={styles.previewTagText}>
-                      {selectedItem.style || "Standard"}
+                <View style={styles.previewFooter}>
+                  <View style={styles.previewUser}>
+                    <View style={styles.modalAvatar}>
+                      <Text style={styles.avatarText}>
+                        {(selectedItem.userName || "Y")[0]}
+                      </Text>
+                    </View>
+                    <Text style={styles.modalUsername}>
+                      {selectedItem.userName || "You"}
                     </Text>
                   </View>
-                  <View style={styles.previewTag}>
-                    <Text style={styles.previewTagText}>
-                      {selectedItem.resolution || "Portrait"}
-                    </Text>
+
+                  <View style={styles.previewStats}>
+                    <View style={styles.statItem}>
+                      <Ionicons name="heart" size={20} color={THEME.danger} />
+                      <Text style={styles.statText}>
+                        {selectedItem.likesCount ?? selectedItem.likes ?? 0}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
                 <View style={styles.previewActions}>
                   <TouchableOpacity
-                    style={[
-                      styles.modalAction,
-                      { backgroundColor: THEME.accent },
-                    ]}
+                    style={styles.primaryAction}
                     onPress={() => handleDownload(selectedItem)}
                   >
-                    <Ionicons name="download" size={20} color="#0f172a" />
-                    <Text
-                      style={[styles.modalActionText, { color: "#0f172a" }]}
-                    >
-                      Download
-                    </Text>
+                    <Ionicons name="download" size={24} color="#0f172a" />
+                    <Text style={styles.primaryActionText}>Download</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.modalAction}
-                    onPress={() => handleFavorite(selectedItem)}
-                  >
-                    <Ionicons name="heart" size={20} color="#fff" />
-                    <Text style={styles.modalActionText}>Favorite</Text>
-                  </TouchableOpacity>
+                  <View style={styles.secondaryActions}>
+                    <TouchableOpacity
+                      style={styles.iconAction}
+                      onPress={() => handleFavoriteToggle(selectedItem)}
+                    >
+                      <Ionicons
+                        name={
+                          selectedItem &&
+                          (selectedItem.favoritedByCurrentUser ||
+                            isFavorite(
+                              String(
+                                selectedItem.wallpaperId ?? selectedItem.id,
+                              ),
+                            ))
+                            ? "bookmark"
+                            : "bookmark-outline"
+                        }
+                        size={24}
+                        color={
+                          selectedItem &&
+                          (selectedItem.favoritedByCurrentUser ||
+                            isFavorite(
+                              String(
+                                selectedItem.wallpaperId ?? selectedItem.id,
+                              ),
+                            ))
+                            ? THEME.accent
+                            : "#fff"
+                        }
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </BlurView>
             </Animated.View>
@@ -372,6 +465,15 @@ const styles = StyleSheet.create({
     maxHeight: height * 0.68,
     alignSelf: "center",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  imageShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 20,
   },
   closeButton: {
     position: "absolute",
@@ -394,6 +496,8 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === "ios" ? 50 : 30,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.15)",
     overflow: "hidden",
   },
   previewPrompt: {
@@ -403,40 +507,78 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     lineHeight: 24,
   },
-  previewMeta: {
+  previewFooter: {
     flexDirection: "row",
-    gap: 10,
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 25,
   },
-  previewTag: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+  previewUser: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
-  previewTagText: {
-    color: THEME.textSecondary,
-    fontSize: 12,
+  modalAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: THEME.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    color: "#0f172a",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  modalUsername: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  previewStats: {
+    flexDirection: "row",
+    gap: 15,
+  },
+  statItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "700",
-    textTransform: "uppercase",
   },
   previewActions: {
     flexDirection: "row",
     gap: 15,
   },
-  modalAction: {
-    flex: 1,
+  primaryAction: {
+    flex: 2,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: THEME.accent,
     height: 56,
     borderRadius: 16,
     gap: 10,
   },
-  modalActionText: {
-    color: "#fff",
+  primaryActionText: {
+    color: "#0f172a",
     fontSize: 16,
     fontWeight: "700",
+  },
+  secondaryActions: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 10,
+  },
+  iconAction: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 16,
   },
 });

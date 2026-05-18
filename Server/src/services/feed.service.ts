@@ -19,11 +19,15 @@ export interface FeedWallpaperItem {
   resolution: string | null;
   imageUrl: string;
   likesCount: number;
+  favoritesCount: number;
   createdAt: Date;
   userId: number | null;
   username: string;
   profileImage: string | null;
+  likedByCurrentUser: boolean;
+  favoritedByCurrentUser: boolean;
   isLiked: boolean;
+  isFavorited: boolean;
   creator?: {
     id: number;
     name: string;
@@ -103,7 +107,15 @@ export class FeedService {
     return where;
   }
 
-  private static mapWallpaperRow(wallpaper: any, isLikedOverride?: boolean): FeedWallpaperItem {
+  private static mapWallpaperRow(wallpaper: any): FeedWallpaperItem {
+    const likedByCurrentUser = Array.isArray(wallpaper.likes)
+      ? wallpaper.likes.length > 0
+      : Boolean(wallpaper.likedByCurrentUser ?? wallpaper.isLiked);
+
+    const favoritedByCurrentUser = Array.isArray(wallpaper.favorites)
+      ? wallpaper.favorites.length > 0
+      : Boolean(wallpaper.favoritedByCurrentUser ?? wallpaper.isFavorited);
+
     return {
       id: wallpaper.id,
       prompt: wallpaper.prompt,
@@ -112,16 +124,15 @@ export class FeedService {
       resolution: wallpaper.resolution,
       imageUrl: wallpaper.imageUrl,
       likesCount: wallpaper.likesCount ?? wallpaper._count?.likes ?? 0,
+      favoritesCount: wallpaper.favoritesCount ?? wallpaper._count?.favorites ?? 0,
       createdAt: wallpaper.createdAt,
       userId: wallpaper.userId,
       username: wallpaper.user?.name || 'Anonymous',
       profileImage: wallpaper.user?.profileImage || null,
-      isLiked:
-        typeof isLikedOverride === 'boolean'
-          ? isLikedOverride
-          : Array.isArray(wallpaper.likes)
-            ? wallpaper.likes.length > 0
-            : Boolean(wallpaper.isLiked),
+      likedByCurrentUser,
+      favoritedByCurrentUser,
+      isLiked: likedByCurrentUser,
+      isFavorited: favoritedByCurrentUser,
       creator: wallpaper.user
         ? {
             id: wallpaper.user.id,
@@ -157,6 +168,12 @@ export class FeedService {
             },
           },
           likes: options.userId
+            ? {
+                where: { userId: options.userId },
+                select: { id: true },
+              }
+            : false,
+          favorites: options.userId
             ? {
                 where: { userId: options.userId },
                 select: { id: true },
@@ -199,6 +216,12 @@ export class FeedService {
           },
         },
         likes: userId
+          ? {
+              where: { userId },
+              select: { id: true },
+            }
+          : false,
+        favorites: userId
           ? {
               where: { userId },
               select: { id: true },
@@ -347,6 +370,18 @@ export class FeedService {
                 profileImage: true,
               },
             },
+            likes: userId
+              ? {
+                  where: { userId },
+                  select: { id: true },
+                }
+              : false,
+            favorites: userId
+              ? {
+                  where: { userId },
+                  select: { id: true },
+                }
+              : false,
           },
         })
       : [];

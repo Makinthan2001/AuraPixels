@@ -16,6 +16,7 @@ interface HistoryItem {
   style?: string;
   resolution?: string;
   createdAt: string;
+  favoritedByCurrentUser?: boolean;
 }
 
 interface HistoryGridProps {
@@ -61,6 +62,7 @@ export const HistoryGrid = ({
           onDownload={() => onDownload(item)}
           onFavorite={() => onFavorite(item)}
           onDelete={() => onDelete(item)}
+          isFavorited={Boolean(item.favoritedByCurrentUser)}
         />
       )}
       columnWrapperStyle={styles.columnWrapper}

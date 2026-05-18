@@ -19,16 +19,21 @@ const { width, height } = Dimensions.get("window");
 
 export const WallpaperDetailScreen = ({ route, navigation }: any) => {
   const { wallpaper } = route.params;
-  const { isFavorite, addFavorite, removeFavorite } =
+  const { isFavorite, toggleFavorite: toggleFavoriteInContext } =
     useContext(FavoritesContext);
 
   const favorite = isFavorite(wallpaper.id);
 
-  const toggleFavorite = () => {
-    if (favorite) {
-      removeFavorite(wallpaper.id);
-    } else {
-      addFavorite(wallpaper);
+  const handleFavoriteToggle = async () => {
+    try {
+      await toggleFavoriteInContext({
+        id: String(wallpaper.id),
+        url: wallpaper.url,
+        prompt: wallpaper.title ?? wallpaper.prompt,
+        wallpaperId: Number.parseInt(wallpaper.id, 10),
+      });
+    } catch (error) {
+      Alert.alert("Error", "Failed to update favorite status");
     }
   };
 
@@ -60,9 +65,9 @@ export const WallpaperDetailScreen = ({ route, navigation }: any) => {
         <WallpaperImage
           uri={wallpaper.url}
           aspectRatio={getAspectRatioFromResolution(wallpaper.resolution)}
-          contentFit="contain"
-          borderRadius={0}
-          style={styles.image}
+          contentFit="cover"
+          borderRadius={28}
+          style={[styles.image, styles.imageShadow]}
         />
       </ScrollView>
 
@@ -97,7 +102,7 @@ export const WallpaperDetailScreen = ({ route, navigation }: any) => {
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={styles.actionCircle}
-              onPress={toggleFavorite}
+              onPress={handleFavoriteToggle}
             >
               <Ionicons
                 name={favorite ? "heart" : "heart-outline"}
@@ -148,6 +153,15 @@ const styles = StyleSheet.create({
     width: width - 24,
     maxHeight: height * 0.68,
     alignSelf: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  imageShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 20,
   },
   imageViewport: {
     width: "100%",

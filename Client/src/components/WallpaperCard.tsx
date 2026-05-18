@@ -11,6 +11,8 @@ interface WallpaperCardProps {
   userName: string;
   likes: number;
   isLiked?: boolean;
+  actionIconName?: "heart" | "heart-outline" | "bookmark" | "bookmark-outline";
+  actionIconColor?: string;
   onPress: () => void;
   onLike?: () => void;
 }
@@ -30,10 +32,16 @@ export const WallpaperCard: React.FC<WallpaperCardProps> = ({
   userName,
   likes,
   isLiked = false,
+  actionIconName,
+  actionIconColor,
   onPress,
   onLike,
 }) => {
   const resolvedAspectRatio = 0.86;
+  const resolvedActionIcon =
+    actionIconName ?? (isLiked ? "heart" : "heart-outline");
+  const resolvedActionColor =
+    actionIconColor ?? (isLiked ? THEME.danger : "#fff");
 
   return (
     <View style={styles.wrapper}>
@@ -76,9 +84,9 @@ export const WallpaperCard: React.FC<WallpaperCardProps> = ({
                 }}
               >
                 <Ionicons
-                  name={isLiked ? "heart" : "heart-outline"}
+                  name={resolvedActionIcon}
                   size={18}
-                  color={isLiked ? THEME.danger : "#fff"}
+                  color={resolvedActionColor}
                 />
                 <Text style={styles.likesText}>{likes}</Text>
               </TouchableOpacity>
@@ -94,6 +102,11 @@ const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
     marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
   },
   container: {
     width: "100%",
@@ -101,7 +114,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: THEME.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   image: {
     width: "100%",

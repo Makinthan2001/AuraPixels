@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
+  useWindowDimensions,
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -22,11 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 
-const { width } = Dimensions.get('window');
-const ITEM_WIDTH = width * 0.82;
-const ITEM_HEIGHT = ITEM_WIDTH * 1.5;
 const SPACING = 16;
-const FULL_ITEM_SIZE = ITEM_WIDTH + SPACING;
 
 interface TrendingItem {
   id: string;
@@ -71,11 +67,16 @@ const TrendingCard = ({
   onPress: () => void;
   onLike?: () => void;
 }) => {
+  const { width } = useWindowDimensions();
+  const itemWidth = width * 0.82;
+  const itemHeight = itemWidth * 1.5;
+  const fullItemSize = itemWidth + SPACING;
+
   const animatedStyle = useAnimatedStyle(() => {
     const inputRange = [
-      (index - 1) * FULL_ITEM_SIZE,
-      index * FULL_ITEM_SIZE,
-      (index + 1) * FULL_ITEM_SIZE,
+      (index - 1) * fullItemSize,
+      index * fullItemSize,
+      (index + 1) * fullItemSize,
     ];
 
     const scale = interpolate(
@@ -100,9 +101,9 @@ const TrendingCard = ({
 
   const imageAnimatedStyle = useAnimatedStyle(() => {
     const inputRange = [
-      (index - 1) * FULL_ITEM_SIZE,
-      index * FULL_ITEM_SIZE,
-      (index + 1) * FULL_ITEM_SIZE,
+      (index - 1) * fullItemSize,
+      index * fullItemSize,
+      (index + 1) * fullItemSize,
     ];
 
     const translateX = interpolate(
@@ -118,11 +119,11 @@ const TrendingCard = ({
   });
 
   return (
-    <Animated.View style={[styles.cardContainer, animatedStyle]}>
+    <Animated.View style={[styles.cardContainer, { width: itemWidth, marginRight: SPACING }, animatedStyle]}>
       <TouchableOpacity
         activeOpacity={0.95}
         onPress={onPress}
-        style={styles.card}
+        style={[styles.card, { width: itemWidth, height: itemHeight }]}
       >
         <Animated.View style={StyleSheet.absoluteFill}>
           <Image
@@ -173,9 +174,14 @@ const TrendingCard = ({
   );
 };
 
-const SkeletonCard = () => (
-  <View style={[styles.cardContainer, { opacity: 0.6 }]}>
-    <View style={[styles.card, { backgroundColor: THEME.card }]}>
+const SkeletonCard = () => {
+  const { width } = useWindowDimensions();
+  const itemWidth = width * 0.82;
+  const itemHeight = itemWidth * 1.5;
+
+  return (
+    <View style={[styles.cardContainer, { width: itemWidth, marginRight: SPACING, opacity: 0.6 }]}>
+      <View style={[styles.card, { width: itemWidth, height: itemHeight, backgroundColor: THEME.card }]}>
       <LinearGradient
         colors={[THEME.card, '#475569', THEME.card]}
         start={{ x: 0, y: 0 }}
@@ -184,9 +190,14 @@ const SkeletonCard = () => (
       />
     </View>
   </View>
-);
+  );
+};
 
 export const TrendingCarousel = ({ data, loading, onItemPress, onLike }: TrendingCarouselProps) => {
+  const { width } = useWindowDimensions();
+  const itemWidth = width * 0.82;
+  const fullItemSize = itemWidth + SPACING;
+
   const scrollX = useSharedValue(0);
 
   const onScroll = useAnimatedScrollHandler((event) => {
@@ -251,7 +262,7 @@ export const TrendingCarousel = ({ data, loading, onItemPress, onLike }: Trendin
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        snapToInterval={FULL_ITEM_SIZE}
+        snapToInterval={fullItemSize}
         snapToAlignment="start"
         decelerationRate="fast"
         onScroll={onScroll}
@@ -304,18 +315,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   cardContainer: {
-    width: ITEM_WIDTH,
-    marginRight: SPACING,
-  },
-  card: {
-    width: ITEM_WIDTH,
-    height: ITEM_HEIGHT,
-    borderRadius: 32,
-    overflow: 'hidden',
-    backgroundColor: '#0f172a',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.4,
         shadowRadius: 16,
@@ -324,6 +326,13 @@ const styles = StyleSheet.create({
         elevation: 12,
       },
     }),
+  },
+  card: {
+    borderRadius: 32,
+    overflow: "hidden",
+    backgroundColor: "#0f172a",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   image: {
     width: '100%',

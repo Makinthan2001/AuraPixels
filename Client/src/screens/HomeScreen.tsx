@@ -67,8 +67,11 @@ const normalizeWallpaper = (item: any) => {
     prompt: item?.prompt || item?.title || "Generated wallpaper",
     userName: username,
     user: item?.user || { name: username, avatar: profileImage || undefined },
-    likes: item?.likes ?? item?.likesCount ?? item?._count?.likes ?? 0,
-    isLiked: Boolean(item?.isLiked),
+    likes: item?.likesCount ?? item?.likes ?? item?._count?.likes ?? 0,
+    likesCount: item?.likesCount ?? item?.likes ?? item?._count?.likes ?? 0,
+    favoritesCount: item?.favoritesCount ?? item?._count?.favorites ?? 0,
+    isLiked: Boolean(item?.likedByCurrentUser ?? item?.isLiked),
+    isFavorited: Boolean(item?.favoritedByCurrentUser ?? item?.isFavorited),
     profileImage,
     category: item?.category || item?.style || null,
     style: item?.style,
@@ -101,7 +104,7 @@ export const HomeScreen = () => {
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const { addFavorite: addFavoriteToContext, removeFavorite: removeFavoriteFromContext, isFavorite } = useContext(FavoritesContext);
+  const { isFavorite, toggleFavorite } = useContext(FavoritesContext);
 
   const feedCacheRef = useRef<Record<string, any[]>>({});
   const trendingCacheRef = useRef<any[] | null>(null);
@@ -235,28 +238,70 @@ export const HomeScreen = () => {
     setRefreshing(false);
   }, [fetchFeed, fetchTrending]);
 
-  const handleLike = async (item: any) => {
-    try {
-      setFilteredWallpapers((prev) => {
-        const updated = prev.map((w) => {
-          if (w.id === item.id) {
-            return {
-              ...w,
-              isLiked: !w.isLiked,
-              likes: w.isLiked ? w.likes - 1 : w.likes + 1,
-            };
-          }
-          return w;
-        });
+  const patchWallpaperState = useCallback(
+    (wallpaperId: string, patcher: (item: any) => any) => {
+      const applyPatch = (items: any[]) =>
+        items.map((item) =>
+          String(item.id) === String(wallpaperId) ? patcher(item) : item,
+        );
 
-        feedCacheRef.current[feedKey] = updated;
-        return updated;
+      setTrendingWallpapers((prev) => applyPatch(prev));
+      setFilteredWallpapers((prev) => applyPatch(prev));
+
+      if (trendingCacheRef.current) {
+        trendingCacheRef.current = applyPatch(trendingCacheRef.current);
+      }
+
+      Object.keys(feedCacheRef.current).forEach((key) => {
+        feedCacheRef.current[key] = applyPatch(feedCacheRef.current[key]);
       });
 
-      await api.toggleLike(item.id);
+      setSelectedItem((current) =>
+        current && String(current.id) === String(wallpaperId)
+          ? patcher(current)
+          : current,
+      );
+    },
+    [],
+  );
+
+  const handleLike = async (item: any) => {
+    const wallpaperId = String(item.id);
+    const likedBefore = Boolean(item.likedByCurrentUser ?? item.isLiked);
+
+    try {
+      patchWallpaperState(wallpaperId, (current) => ({
+        ...current,
+        isLiked: !likedBefore,
+        likedByCurrentUser: !likedBefore,
+        likes: Math.max(
+          (current.likes ?? current.likesCount ?? 0) + (likedBefore ? -1 : 1),
+          0,
+        ),
+        likesCount: Math.max(
+          (current.likesCount ?? current.likes ?? 0) + (likedBefore ? -1 : 1),
+          0,
+        ),
+      }));
+
+      const response = await api.toggleLike(item.id);
+      const payload = response.data?.data ?? response.data ?? {};
+      const liked = Boolean(
+        payload?.liked ?? payload?.likedByCurrentUser ?? !likedBefore,
+      );
+      const likesCount = Number(payload?.likesCount ?? 0);
+
+      patchWallpaperState(wallpaperId, (current) => ({
+        ...current,
+        isLiked: liked,
+        likedByCurrentUser: liked,
+        likes: likesCount,
+        likesCount,
+      }));
     } catch (error) {
       console.error("Failed to toggle like:", error);
       void fetchFeed({ force: true });
+      void fetchTrending(true);
     }
   };
 
@@ -270,17 +315,23 @@ export const HomeScreen = () => {
     try {
       setIsDownloading(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant permission to save images.');
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant permission to save images.",
+        );
         return;
       }
       const fileUri = `${FileSystem.documentDirectory}${selectedItem.id}.jpg`;
-      const { uri } = await FileSystem.downloadAsync(selectedItem.imageUrl, fileUri);
+      const { uri } = await FileSystem.downloadAsync(
+        selectedItem.imageUrl,
+        fileUri,
+      );
       await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert('Success', 'Wallpaper saved to your gallery!');
+      Alert.alert("Success", "Wallpaper saved to your gallery!");
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to download wallpaper.');
+      Alert.alert("Error", "Failed to download wallpaper.");
     } finally {
       setIsDownloading(false);
     }
@@ -293,40 +344,22 @@ export const HomeScreen = () => {
       id: String(selectedItem.id),
       url: selectedItem.imageUrl,
       prompt: selectedItem.prompt,
+      wallpaperId: Number.parseInt(selectedItem.id, 10),
     };
-    
-    const currentlyFavorited = isFavorite(String(selectedItem.id));
-    
-    // Optimistic UI update for context
-    if (currentlyFavorited) {
-      removeFavoriteFromContext(String(selectedItem.id));
-    } else {
-      addFavoriteToContext(wallpaperObj);
-    }
 
     try {
-      const parsedId = parseInt(selectedItem.id, 10);
-      
-      if (!Number.isNaN(parsedId)) {
-        const response = await api.addFavorite(parsedId);
-        if (response.data?.message === 'Favorite removed') {
-          Alert.alert('Removed', 'Removed from favorites.');
-        } else {
-          Alert.alert('Success', 'Added to favorites!');
-        }
+      const result = await toggleFavorite(wallpaperObj);
+
+      if (result.favorited) {
+        Alert.alert("Success", "Added to favorites!");
       } else {
-        // Handle mock items gracefully without pinging DB
-        Alert.alert(currentlyFavorited ? 'Removed' : 'Success', currentlyFavorited ? 'Removed from local favorites.' : 'Added to local favorites!');
+        Alert.alert("Removed", "Removed from favorites.");
       }
     } catch (error: any) {
-      // Revert optimistic update on failure
-      if (currentlyFavorited) {
-        addFavoriteToContext(wallpaperObj);
-      } else {
-        removeFavoriteFromContext(String(selectedItem.id));
-      }
-      const msg = error.response?.data?.message || 'Failed to update favorites. Please check if you are logged in and the wallpaper exists.';
-      Alert.alert('Error', msg);
+      const msg =
+        error.response?.data?.message ||
+        "Failed to update favorites. Please check if you are logged in and the wallpaper exists.";
+      Alert.alert("Error", msg);
     }
   };
 
@@ -410,9 +443,9 @@ export const HomeScreen = () => {
                 aspectRatio={getAspectRatioFromResolution(
                   selectedItem.resolution,
                 )}
-                contentFit="contain"
+                contentFit="cover"
                 borderRadius={28}
-                style={styles.fullImage}
+                style={[styles.fullImage, styles.imageShadow]}
               />
 
               <BlurView intensity={40} tint="dark" style={styles.previewInfo}>
@@ -433,14 +466,19 @@ export const HomeScreen = () => {
                   <View style={styles.previewStats}>
                     <View style={styles.statItem}>
                       <Ionicons name="heart" size={20} color={THEME.danger} />
-                      <Text style={styles.statText}>{selectedItem.likes}</Text>
+                      <Text style={styles.statText}>
+                        {selectedItem.likesCount ?? selectedItem.likes}
+                      </Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.previewActions}>
-                  <TouchableOpacity 
-                    style={[styles.primaryAction, isDownloading && { opacity: 0.7 }]} 
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryAction,
+                      isDownloading && { opacity: 0.7 },
+                    ]}
                     onPress={handleDownload}
                     disabled={isDownloading}
                   >
@@ -451,11 +489,22 @@ export const HomeScreen = () => {
                   </TouchableOpacity>
 
                   <View style={styles.secondaryActions}>
-                    <TouchableOpacity style={styles.iconAction} onPress={handleFavorite}>
-                      <Ionicons 
-                        name={selectedItem && isFavorite(String(selectedItem.id)) ? "bookmark" : "bookmark-outline"} 
-                        size={24} 
-                        color={selectedItem && isFavorite(String(selectedItem.id)) ? THEME.accent : "#fff"} 
+                    <TouchableOpacity
+                      style={styles.iconAction}
+                      onPress={handleFavorite}
+                    >
+                      <Ionicons
+                        name={
+                          selectedItem && isFavorite(String(selectedItem.id))
+                            ? "bookmark"
+                            : "bookmark-outline"
+                        }
+                        size={24}
+                        color={
+                          selectedItem && isFavorite(String(selectedItem.id))
+                            ? THEME.accent
+                            : "#fff"
+                        }
                       />
                     </TouchableOpacity>
                   </View>
@@ -519,6 +568,15 @@ const styles = StyleSheet.create({
     maxHeight: height * 0.68,
     alignSelf: "center",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  imageShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 20,
   },
   closeBtn: {
     position: "absolute",
@@ -541,6 +599,8 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === "ios" ? 50 : 30,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.15)",
     overflow: "hidden",
   },
   previewPrompt: {

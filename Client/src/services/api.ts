@@ -97,7 +97,8 @@ export const api = {
 
   // Favorites
   getFavorites: (params?: { page?: number; limit?: number }) => apiClient.get('/favorites', { params }),
-  addFavorite: (wallpaperId: number) => apiClient.post('/favorites', { wallpaper_id: wallpaperId }),
+  toggleFavorite: (wallpaperId: number) => apiClient.post(`/favorites/${wallpaperId}`),
+  addFavorite: (wallpaperId: number) => apiClient.post(`/favorites/${wallpaperId}`),
   removeFavorite: (favoriteId: number) => apiClient.delete(`/favorites/${favoriteId}`),
 
   // History
