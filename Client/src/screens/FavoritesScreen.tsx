@@ -12,6 +12,7 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { height } = Dimensions.get("window");
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -55,6 +56,7 @@ export const FavoritesScreen = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const hasFocusedOnceRef = React.useRef(false);
 
   const {
     removeFavorite: removeFavoriteFromContext,
@@ -63,31 +65,46 @@ export const FavoritesScreen = () => {
     toggleFavorite,
   } = useContext(FavoritesContext);
 
-  const fetchFavorites = async (pageNum = 1, shouldRefresh = false) => {
-    try {
-      if (pageNum === 1) setLoading(true);
-      const response = await api.getFavorites({ page: pageNum, limit: 10 });
-      const newItems = response.data?.data || [];
+  const fetchFavorites = useCallback(
+    async (pageNum = 1, shouldRefresh = false) => {
+      try {
+        if (pageNum === 1) setLoading(true);
+        const response = await api.getFavorites({ page: pageNum, limit: 10 });
+        const newItems = response.data?.data || [];
 
-      if (shouldRefresh || pageNum === 1) {
-        setFavoritesList(newItems);
-      } else {
-        setFavoritesList((prev) => [...prev, ...newItems]);
+        if (shouldRefresh || pageNum === 1) {
+          setFavoritesList(newItems);
+        } else {
+          setFavoritesList((prev) => [...prev, ...newItems]);
+        }
+
+        setHasMore(newItems.length === 10);
+        setPage(pageNum);
+      } catch (error) {
+        console.error("Failed to fetch favorites", error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-
-      setHasMore(newItems.length === 10);
-      setPage(pageNum);
-    } catch (error) {
-      console.error("Failed to fetch favorites", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchFavorites(1);
-  }, []);
+  }, [fetchFavorites]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedOnceRef.current) {
+        hasFocusedOnceRef.current = true;
+        return;
+      }
+
+      setRefreshing(true);
+      void fetchFavorites(1, true);
+    }, [fetchFavorites]),
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {

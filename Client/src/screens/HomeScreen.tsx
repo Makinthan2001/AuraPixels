@@ -20,6 +20,7 @@ import {
   Share,
   Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
@@ -105,10 +106,12 @@ export const HomeScreen = () => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { isFavorite, toggleFavorite } = useContext(FavoritesContext);
+  const { homeFeedRevision } = useContext(FavoritesContext);
 
   const feedCacheRef = useRef<Record<string, any[]>>({});
   const trendingCacheRef = useRef<any[] | null>(null);
   const requestIdRef = useRef(0);
+  const lastSyncedRevisionRef = useRef(0);
 
   const feedKey = useMemo(
     () => `${selectedCategory}::${debouncedSearchQuery.trim().toLowerCase()}`,
@@ -156,6 +159,7 @@ export const HomeScreen = () => {
       force?: boolean;
       category?: string;
       search?: string;
+      preserveCurrent?: boolean;
     }) => {
       const category = options?.category ?? selectedCategory;
       const search = (options?.search ?? debouncedSearchQuery).trim();
@@ -169,8 +173,10 @@ export const HomeScreen = () => {
       }
 
       const requestId = ++requestIdRef.current;
-      setLoadingCategory(true);
-      setFilteredWallpapers([]);
+      if (!options?.preserveCurrent) {
+        setLoadingCategory(true);
+        setFilteredWallpapers([]);
+      }
 
       try {
         const response = await api.getFeed({
@@ -214,6 +220,22 @@ export const HomeScreen = () => {
     void fetchFeed();
   }, [fetchFeed]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (lastSyncedRevisionRef.current === homeFeedRevision) {
+        return;
+      }
+
+      lastSyncedRevisionRef.current = homeFeedRevision;
+      requestIdRef.current += 1;
+
+      void Promise.all([
+        fetchTrending(true),
+        fetchFeed({ force: true, preserveCurrent: true }),
+      ]);
+    }, [fetchFeed, fetchTrending, homeFeedRevision]),
+  );
+
   const handleSelectCategory = useCallback(
     (category: string) => {
       setSelectedCategory(category);
@@ -234,7 +256,10 @@ export const HomeScreen = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchTrending(true), fetchFeed({ force: true })]);
+    await Promise.all([
+      fetchTrending(true),
+      fetchFeed({ force: true, preserveCurrent: true }),
+    ]);
     setRefreshing(false);
   }, [fetchFeed, fetchTrending]);
 

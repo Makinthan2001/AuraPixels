@@ -5,6 +5,7 @@ import {
   FlatList,
   Platform,
   useWindowDimensions,
+  RefreshControl,
 } from "react-native";
 import { HistoryCard } from "./HistoryCard";
 import { EmptyHistory } from "./EmptyHistory";
@@ -22,19 +23,23 @@ interface HistoryItem {
 interface HistoryGridProps {
   data: HistoryItem[];
   loading: boolean;
+  refreshing?: boolean;
   onItemPress: (item: HistoryItem) => void;
   onDownload: (item: HistoryItem) => void;
   onFavorite: (item: HistoryItem) => void;
   onDelete: (item: HistoryItem) => void;
+  onRefresh?: () => void;
 }
 
 export const HistoryGrid = ({
   data,
   loading,
+  refreshing = false,
   onItemPress,
   onDownload,
   onFavorite,
   onDelete,
+  onRefresh,
 }: HistoryGridProps) => {
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === "web" && width >= 1024;
@@ -54,6 +59,15 @@ export const HistoryGrid = ({
       data={data}
       numColumns={2}
       keyExtractor={(item) => item.id}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#38bdf8"
+          />
+        ) : undefined
+      }
       renderItem={({ item, index }) => (
         <HistoryCard
           item={item}

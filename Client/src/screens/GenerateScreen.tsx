@@ -97,7 +97,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedImage, setGeneratedImage] = useState<any>(null);
 
-  const { addToHistory } = useContext(FavoritesContext);
+  const { addToHistory, invalidateHomeFeed } = useContext(FavoritesContext);
   const spinValue = useSharedValue(0);
   const lastGenerateAtRef = useRef(0);
 
@@ -182,6 +182,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
       setGeneratedImage(newImage);
       setGenerationProgress(100);
       addToHistory(newImage);
+      invalidateHomeFeed();
 
       // Server already saves history when generating via `/api/ai/generate`.
       // No need to call `api.addHistory` here to avoid duplicate entries.
@@ -255,161 +256,161 @@ export const GenerateScreen = ({ route, navigation }: any) => {
       <StatusBar barStyle="light-content" />
       <TopBar />
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Preview Container */}
+        <Animated.View
+          entering={FadeInDown.duration(800)}
+          style={[styles.previewCard, { aspectRatio: previewAspectRatio }]}
         >
-          {/* Preview Container */}
-          <Animated.View
-            entering={FadeInDown.duration(800)}
-            style={[styles.previewCard, { aspectRatio: previewAspectRatio }]}
-          >
-            <View style={styles.previewBackground} />
+          <View style={styles.previewBackground} />
 
-            {generatedImage ? (
-              <WallpaperImage
-                uri={generatedImage.url}
-                aspectRatio={previewAspectRatio}
-                contentFit="cover"
-                borderRadius={40}
-                style={styles.previewImage}
-              />
-            ) : (
-              <View style={styles.placeholderContainer}>
-                {isGenerating ? (
-                  <View style={styles.loadingContainer}>
-                    <Animated.View style={[styles.spinner, animatedSpin]}>
-                      <Ionicons
-                        name="sparkles"
-                        size={40}
-                        color={LUMINA_COLORS.primary}
-                      />
-                    </Animated.View>
-                    <Text style={styles.loadingText}>{generationStatus}</Text>
-                    <Text style={styles.loadingSubtext}>
-                      This may take a few seconds depending on the model load.
-                    </Text>
-                    <View style={styles.progressTrack}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${Math.max(generationProgress, 10)}%` },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.progressText}>
-                      {Math.round(generationProgress)}%
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    <View style={styles.placeholderIconBox}>
-                      <Ionicons
-                        name="image-outline"
-                        size={32}
-                        color={LUMINA_COLORS.outline}
-                      />
-                    </View>
-                    <Text style={styles.placeholderTitle}>
-                      Generated image will appear here
-                    </Text>
-                    <Text style={styles.placeholderSubtitle}>
-                      AWAITING PROMPT ENGINEERING
-                    </Text>
-                  </>
-                )}
-              </View>
-            )}
-
-            <View style={styles.previewActions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleDownload}
-                disabled={!generatedImage}
-              >
-                <Ionicons
-                  name="download-outline"
-                  size={20}
-                  color={LUMINA_COLORS.white}
-                />
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-
-          {/* Art Style Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Art Style</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
-            >
-              {ART_STYLES.map((style, index) => (
-                <View key={style.id}>
-                  <TouchableOpacity
-                    onPress={() => setActiveStyle(style.id)}
-                    style={[
-                      styles.styleCard,
-                      activeStyle === style.id && styles.activeStyleCard,
-                    ]}
-                  >
-                    <Image
-                      source={{ uri: style.image }}
-                      style={styles.styleImage}
+          {generatedImage ? (
+            <WallpaperImage
+              uri={generatedImage.url}
+              aspectRatio={previewAspectRatio}
+              contentFit="cover"
+              borderRadius={40}
+              style={styles.previewImage}
+            />
+          ) : (
+            <View style={styles.placeholderContainer}>
+              {isGenerating ? (
+                <View style={styles.loadingContainer}>
+                  <Animated.View style={[styles.spinner, animatedSpin]}>
+                    <Ionicons
+                      name="sparkles"
+                      size={40}
+                      color={LUMINA_COLORS.primary}
                     />
-                    <View style={styles.styleOverlay}>
-                      <Text
-                        style={[
-                          styles.styleName,
-                          activeStyle === style.id && {
-                            color: LUMINA_COLORS.primary,
-                          },
-                        ]}
-                      >
-                        {style.name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+                  </Animated.View>
+                  <Text style={styles.loadingText}>{generationStatus}</Text>
+                  <Text style={styles.loadingSubtext}>
+                    This may take a few seconds depending on the model load.
+                  </Text>
+                  <View style={styles.progressTrack}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${Math.max(generationProgress, 10)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {Math.round(generationProgress)}%
+                  </Text>
                 </View>
-              ))}
-            </ScrollView>
-          </View>
+              ) : (
+                <>
+                  <View style={styles.placeholderIconBox}>
+                    <Ionicons
+                      name="image-outline"
+                      size={32}
+                      color={LUMINA_COLORS.outline}
+                    />
+                  </View>
+                  <Text style={styles.placeholderTitle}>
+                    Generated image will appear here
+                  </Text>
+                  <Text style={styles.placeholderSubtitle}>
+                    AWAITING PROMPT ENGINEERING
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
 
-          {/* Resolution Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Resolution</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
+          <View style={styles.previewActions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleDownload}
+              disabled={!generatedImage}
             >
-              {RESOLUTIONS.map((res, index) => (
-                <View key={res.value}>
-                  <TouchableOpacity
-                    onPress={() => setActiveRes(res.value)}
-                    style={[
-                      styles.resPill,
-                      activeRes === res.value && styles.activeResPill,
-                    ]}
-                  >
+              <Ionicons
+                name="download-outline"
+                size={20}
+                color={LUMINA_COLORS.white}
+              />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Art Style Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Art Style</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScroll}
+          >
+            {ART_STYLES.map((style, index) => (
+              <View key={style.id}>
+                <TouchableOpacity
+                  onPress={() => setActiveStyle(style.id)}
+                  style={[
+                    styles.styleCard,
+                    activeStyle === style.id && styles.activeStyleCard,
+                  ]}
+                >
+                  <Image
+                    source={{ uri: style.image }}
+                    style={styles.styleImage}
+                  />
+                  <View style={styles.styleOverlay}>
                     <Text
                       style={[
-                        styles.resText,
-                        activeRes === res.value && styles.activeResText,
+                        styles.styleName,
+                        activeStyle === style.id && {
+                          color: LUMINA_COLORS.primary,
+                        },
                       ]}
                     >
-                      {res.label}
+                      {style.name}
                     </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
 
-          <View style={{ height: 200 }} />
-        </ScrollView>
+        {/* Resolution Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Resolution</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScroll}
+          >
+            {RESOLUTIONS.map((res, index) => (
+              <View key={res.value}>
+                <TouchableOpacity
+                  onPress={() => setActiveRes(res.value)}
+                  style={[
+                    styles.resPill,
+                    activeRes === res.value && styles.activeResPill,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.resText,
+                      activeRes === res.value && styles.activeResText,
+                    ]}
+                  >
+                    {res.label}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={{ height: 200 }} />
+      </ScrollView>
 
       {/* Floating Prompt Bar */}
       <BlurView intensity={20} tint="dark" style={styles.promptBarContainer}>

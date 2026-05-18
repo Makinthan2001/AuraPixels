@@ -29,6 +29,8 @@ interface FavoritesContextData {
   isFavorite: (id: string) => boolean;
   addToHistory: (wallpaper: Wallpaper) => void;
   refreshFavorites: () => Promise<void>;
+  homeFeedRevision: number;
+  invalidateHomeFeed: () => void;
   toggleFavorite: (
     wallpaper: Wallpaper,
   ) => Promise<{ favorited: boolean; favoritesCount: number }>;
@@ -43,6 +45,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [favorites, setFavorites] = useState<Wallpaper[]>([]);
   const [history, setHistory] = useState<Wallpaper[]>([]);
+  const [homeFeedRevision, setHomeFeedRevision] = useState(0);
   const { isAuthenticated } = useContext(AuthContext);
 
   const refreshFavorites = useCallback(async () => {
@@ -104,6 +107,10 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({
     setHistory((current) => [wallpaper, ...current]);
   };
 
+  const invalidateHomeFeed = useCallback(() => {
+    setHomeFeedRevision((current) => current + 1);
+  }, []);
+
   const toggleFavorite = useCallback(
     async (wallpaper: Wallpaper) => {
       const wallpaperId =
@@ -146,6 +153,8 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({
           removeFavorite(String(wallpaper.id));
         }
 
+        invalidateHomeFeed();
+
         return { favorited, favoritesCount };
       } catch (error) {
         if (currentlyFavorited) {
@@ -170,6 +179,8 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({
         isFavorite,
         addToHistory,
         refreshFavorites,
+        homeFeedRevision,
+        invalidateHomeFeed,
         toggleFavorite,
       }}
     >

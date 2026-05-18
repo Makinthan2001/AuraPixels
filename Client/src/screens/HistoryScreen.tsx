@@ -16,6 +16,7 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
@@ -53,6 +54,7 @@ export const HistoryScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Custom Modal States
   const [itemToDelete, setItemToDelete] = useState<any>(null);
@@ -61,6 +63,7 @@ export const HistoryScreen = () => {
 
   const { addFavorite, removeFavorite, isFavorite, toggleFavorite } =
     useContext(FavoritesContext);
+  const hasFocusedOnceRef = React.useRef(false);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -75,6 +78,18 @@ export const HistoryScreen = () => {
       setLoading(false);
     }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedOnceRef.current) {
+        hasFocusedOnceRef.current = true;
+        return;
+      }
+
+      setRefreshing(true);
+      void fetchHistory().finally(() => setRefreshing(false));
+    }, [fetchHistory]),
+  );
 
   const executeClearAll = useCallback(async () => {
     try {
@@ -292,6 +307,11 @@ export const HistoryScreen = () => {
           <HistoryGrid
             data={filteredItems}
             loading={loading}
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              void fetchHistory().finally(() => setRefreshing(false));
+            }}
             onItemPress={openPreview}
             onDownload={handleDownload}
             onFavorite={handleFavoriteToggle}
