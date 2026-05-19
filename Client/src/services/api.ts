@@ -16,19 +16,23 @@ const getBaseUrl = () => {
 
   // Web: use window location
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:5001/api`;
+    return `${window.location.protocol}//${window.location.hostname}:5000/api`;
   }
 
   // Expo: try to derive host from manifest/debuggerHost (works for emulator)
   const manifest: any = Constants.manifest || (Constants as any).expoConfig;
   const debuggerHost = manifest?.debuggerHost;
+  // Android emulator (default Android emulator) routes to host machine via 10.0.2.2
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5000/api';
+  }
   if (debuggerHost) {
     const host = debuggerHost.split(':').shift();
-    return `http://${host}:5001/api`;
+    return `http://${host}:5000/api`;
   }
 
   // Fallback to localhost (use machine IP on physical device)
-  return 'http://localhost:5001/api';
+  return 'http://localhost:5000/api';
 };
 
 const BASE_URL = getBaseUrl();
