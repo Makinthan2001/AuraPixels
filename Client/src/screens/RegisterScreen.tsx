@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
@@ -20,8 +20,9 @@ export const RegisterScreen = ({ navigation }: any) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { registerInitiate, googleSignIn, isLoading } = useContext(AuthContext);
+  const { registerInitiate, googleSignIn } = useContext(AuthContext);
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: '422784466370-j6lfhsb1eglqbnf06116hbickririnit.apps.googleusercontent.com',
@@ -31,8 +32,24 @@ export const RegisterScreen = ({ navigation }: any) => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       handleBackendGoogleAuth(id_token);
+    } else if (response && response.type !== 'dismiss') {
+      // Clear loading if response was not success
+      setIsGoogleLoading(false);
     }
   }, [response]);
+
+  const handleGooglePress = async () => {
+    try {
+      setIsGoogleLoading(true);
+      setError(null);
+      const result = await promptAsync();
+      if (result?.type !== 'success') {
+        setIsGoogleLoading(false);
+      }
+    } catch (err) {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleBackendGoogleAuth = async (idToken: string) => {
     try {
@@ -64,10 +81,13 @@ export const RegisterScreen = ({ navigation }: any) => {
     
     try {
       setError(null);
+      setIsRegisterLoading(true);
       await registerInitiate(email);
       navigation.navigate('VerifyOTP', { name, email, password });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsRegisterLoading(false);
     }
   };
 
@@ -154,9 +174,9 @@ export const RegisterScreen = ({ navigation }: any) => {
             </View>
             
             <Button
-              title="Sign Up"
+              title={isRegisterLoading ? "Creating Account..." : "Sign Up"}
               onPress={handleRegister}
-              isLoading={isLoading}
+              isLoading={isRegisterLoading}
               style={styles.signUpButton}
             />
 
@@ -167,15 +187,22 @@ export const RegisterScreen = ({ navigation }: any) => {
             </View>
 
             <TouchableOpacity 
-              style={styles.googleButton} 
-              onPress={() => promptAsync()}
+              style={[styles.googleButton, isGoogleLoading && { opacity: 0.5 }]} 
+              onPress={handleGooglePress}
               disabled={isGoogleLoading}
+              activeOpacity={0.8}
             >
-              <Image 
-                source={require('../../assets/images/google_logo.png')} 
-                style={styles.googleIcon}
-              />
-              <Text style={styles.googleButtonText}>Google</Text>
+              {isGoogleLoading ? (
+                <ActivityIndicator color="#1E293B" style={{ marginRight: 8 }} />
+              ) : (
+                <Image 
+                  source={require('../../assets/images/google_logo.png')} 
+                  style={styles.googleIcon}
+                />
+              )}
+              <Text style={styles.googleButtonText}>
+                {isGoogleLoading ? "Connecting..." : "Google"}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.footerLinks}>

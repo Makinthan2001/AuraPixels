@@ -137,4 +137,67 @@ export const authService = {
   logout: async (token: string) => {
     await prisma.refreshToken.deleteMany({ where: { token } });
   },
+
+  forgotPassword: async (email: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Return success even if user doesn't exist for security reasons (don't leak emails)
+      // but don't actually send an email or store OTP.
+      return { message: 'OTP sent successfully' };
+    }
+
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        resetOtp: otp,
+        resetOtpExpiry: expiresAt,
+        resetOtpVerified: false,
+      },
+    });
+
+    await emailService.sendOTP(email, otp);
+    return { message: 'OTP sent successfully' };
+  },
+
+  verifyResetOTP: async (email: string, otp: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user || user.resetOtp !== otp || !user.resetOtpExpiry || user.resetOtpExpiry < new Date()) {
+      throw new Error('Invalid or expired OTP');
+    }
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        resetOtpVerified: true,
+      },
+    });
+
+    return { message: 'OTP verified' };
+  },
+
+  resetPassword: async (email: string, newPassword: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user || !user.resetOtpVerified) {
+      throw new Error('Unauthorized password reset request');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+        resetOtp: null,
+        resetOtpExpiry: null,
+        resetOtpVerified: false,
+      },
+    });
+
+    return { message: 'Password reset successful' };
+  },
 };

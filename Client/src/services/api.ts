@@ -86,6 +86,10 @@ export const api = {
   logout: (refreshToken: string) => apiClient.post('/auth/logout', { refreshToken }),
   refresh: (refreshToken: string) => apiClient.post('/auth/refresh', { refreshToken }),
   googleSignIn: (idToken: string) => apiClient.post('/auth/google', { idToken }),
+  forgotPassword: (data: { email: string }) => apiClient.post('/auth/forgot-password', data),
+  verifyResetOTP: (data: { email: string; otp: string }) => apiClient.post('/auth/verify-reset-otp', data),
+  resetPassword: (data: { email: string; newPassword: string }) => apiClient.post('/auth/reset-password', data),
+
 
   // Wallpapers
   getWallpapers: () => apiClient.get('/wallpapers'),

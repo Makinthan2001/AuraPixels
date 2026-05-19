@@ -8,6 +8,8 @@ export default function Login() {
     navigate: (screen: string) => {
       if (screen === 'Register') {
         router.push('/(auth)/register');
+      } else if (screen === 'ForgotPassword') {
+        router.push('/(auth)/forgot-password');
       }
     }
   };

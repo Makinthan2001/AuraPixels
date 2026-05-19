@@ -35,6 +35,10 @@ function RootLayoutNav() {
             headerShown: false 
           }} 
         />
+        <Stack.Screen name="help" options={{ headerShown: false, presentation: 'card' }} />
+        <Stack.Screen name="about" options={{ headerShown: false, presentation: 'card' }} />
+        <Stack.Screen name="privacy" options={{ headerShown: false, presentation: 'card' }} />
+        <Stack.Screen name="terms" options={{ headerShown: false, presentation: 'card' }} />
       </Stack>
       {isLoading && (
         <View style={StyleSheet.absoluteFill}>

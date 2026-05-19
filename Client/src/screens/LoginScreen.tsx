@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
@@ -30,8 +30,24 @@ export const LoginScreen = ({ navigation }: any) => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       handleBackendGoogleAuth(id_token);
+    } else if (response && response.type !== 'dismiss') {
+      // Clear loading if response was not success (e.g. error, cancel)
+      setIsGoogleLoading(false);
     }
   }, [response]);
+
+  const handleGooglePress = async () => {
+    try {
+      setIsGoogleLoading(true);
+      setError(null);
+      const result = await promptAsync();
+      if (result?.type !== 'success') {
+        setIsGoogleLoading(false);
+      }
+    } catch (err) {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleBackendGoogleAuth = async (idToken: string) => {
     try {
@@ -119,12 +135,15 @@ export const LoginScreen = ({ navigation }: any) => {
               />
             </View>
             
-            <TouchableOpacity style={styles.forgotPassword}>
+            <TouchableOpacity 
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
             <Button
-              title="Sign in"
+              title={isLoginLoading ? "Signing In..." : "Sign in"}
               onPress={handleLogin}
               isLoading={isLoginLoading}
               style={styles.signInButton}
@@ -137,15 +156,22 @@ export const LoginScreen = ({ navigation }: any) => {
             </View>
 
             <TouchableOpacity 
-              style={styles.googleButton} 
-              onPress={() => promptAsync()}
+              style={[styles.googleButton, isGoogleLoading && { opacity: 0.5 }]} 
+              onPress={handleGooglePress}
               disabled={isGoogleLoading}
+              activeOpacity={0.8}
             >
-              <Image 
-                source={require('../../assets/images/google_logo.png')} 
-                style={styles.googleIcon}
-              />
-              <Text style={styles.googleButtonText}>Google</Text>
+              {isGoogleLoading ? (
+                <ActivityIndicator color="#1E293B" style={{ marginRight: 8 }} />
+              ) : (
+                <Image 
+                  source={require('../../assets/images/google_logo.png')} 
+                  style={styles.googleIcon}
+                />
+              )}
+              <Text style={styles.googleButtonText}>
+                {isGoogleLoading ? "Connecting..." : "Google"}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.footerLinks}>

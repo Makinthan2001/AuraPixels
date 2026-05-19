@@ -30,8 +30,10 @@ import { EditProfileModal } from "../components/EditProfileModal";
 import { LogoutButton } from "../components/LogoutButton";
 import { api } from "../services/api";
 import { COLORS } from "../utils/constants";
+import { useRouter } from "expo-router";
 
 export const ProfileScreen = ({ navigation }: any) => {
+  const router = useRouter();
   const { user, logout, setUser } = useContext(AuthContext);
   const { favorites, history } = useContext(FavoritesContext);
 
@@ -204,29 +206,25 @@ export const ProfileScreen = ({ navigation }: any) => {
       id: "help",
       label: "Help & Support",
       icon: "help-circle-outline",
-      onPress: () => Alert.alert("Support", "Contacting support..."),
+      onPress: () => router.push("/help"),
     },
     {
       id: "about",
       label: "About AuraPixels",
       icon: "information-circle-outline",
-      onPress: () =>
-        Alert.alert(
-          "About",
-          "AuraPixels v1.0.0\nAI-powered wallpaper platform.",
-        ),
+      onPress: () => router.push("/about"),
     },
     {
       id: "privacy",
       label: "Privacy Policy",
       icon: "shield-checkmark-outline",
-      onPress: () => console.log("Privacy"),
+      onPress: () => router.push("/privacy"),
     },
     {
       id: "terms",
       label: "Terms & Conditions",
       icon: "document-text-outline",
-      onPress: () => console.log("Terms"),
+      onPress: () => router.push("/terms"),
     },
   ];
 

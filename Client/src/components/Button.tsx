@@ -48,19 +48,19 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <TouchableOpacity
-      style={[getContainerStyle(), disabled && styles.disabledContainer]}
+      style={[getContainerStyle(), (disabled || isLoading) && styles.disabledContainer]}
       onPress={onPress}
       disabled={disabled || isLoading}
       activeOpacity={0.8}
     >
-      {isLoading ? (
-        <ActivityIndicator color={variant === 'outline' || variant === 'ghost' ? COLORS.primary : COLORS.white} />
-      ) : (
-        <>
-          {icon && <React.Fragment>{icon}</React.Fragment>}
-          <Text style={getTextStyle()}>{title}</Text>
-        </>
+      {isLoading && (
+        <ActivityIndicator 
+          color={variant === 'outline' || variant === 'ghost' ? COLORS.primary : COLORS.white} 
+          style={{ marginRight: 8 }}
+        />
       )}
+      {icon && !isLoading && <React.Fragment>{icon}</React.Fragment>}
+      <Text style={getTextStyle()}>{title}</Text>
     </TouchableOpacity>
   );
 };
