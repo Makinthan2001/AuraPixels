@@ -31,14 +31,18 @@ const STYLE_PROMPTS: Record<AIStyle, string> = {
 
 export class AIService {
   static enhancePrompt(prompt: string, style?: AIStyle): string {
-    let enhanced = prompt.trim();
+    let enhanced = prompt.trim().replace(/\s+/g, ' ');
     
     if (style && STYLE_PROMPTS[style]) {
       enhanced += `, ${STYLE_PROMPTS[style]}`;
     }
 
-    // Common enhancement tags
-    enhanced += ', ultra detailed, 4k wallpaper, high resolution, aesthetic composition';
+    // Keep the final request compact to avoid provider-side 400s from long URLs/prompts.
+    enhanced += ', high quality wallpaper';
+
+    if (enhanced.length > 180) {
+      enhanced = enhanced.slice(0, 180).trim();
+    }
     
     return enhanced;
   }
@@ -72,8 +76,22 @@ export class AIService {
 
     console.log(`Generating image for prompt: "${enhancedPrompt}" with style: ${style}`);
 
-    const imageUrl = `${IMAGE_API_URL}/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&seed=${Math.floor(Math.random() * 1000000)}&nologo=true`;
-    const dataUrl = await this.fetchImageAsDataUrl(imageUrl);
+    const seed = Math.floor(Math.random() * 1000000);
+    const imageUrl = `${IMAGE_API_URL}/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+
+    let dataUrl: string;
+    try {
+      dataUrl = await this.fetchImageAsDataUrl(imageUrl);
+    } catch (error: any) {
+      // Retry with a simpler prompt and safer square dimensions if the provider rejects the request.
+      if (error?.status === 400) {
+        const fallbackPrompt = this.enhancePrompt(prompt, undefined).slice(0, 120);
+        const fallbackUrl = `${IMAGE_API_URL}/${encodeURIComponent(fallbackPrompt)}?width=768&height=768&seed=${seed}&nologo=true`;
+        dataUrl = await this.fetchImageAsDataUrl(fallbackUrl);
+      } else {
+        throw error;
+      }
+    }
     
     return {
       imageUrl: dataUrl,
