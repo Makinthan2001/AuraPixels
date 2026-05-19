@@ -25,7 +25,9 @@ export const RegisterScreen = ({ navigation }: any) => {
   const { registerInitiate, googleSignIn } = useContext(AuthContext);
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: '422784466370-j6lfhsb1eglqbnf06116hbickririnit.apps.googleusercontent.com',
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 
   useEffect(() => {
